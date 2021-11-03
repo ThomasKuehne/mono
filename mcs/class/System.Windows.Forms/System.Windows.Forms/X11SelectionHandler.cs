@@ -561,44 +561,89 @@ namespace System.Windows.Forms
 				DataFormats.FileDrop, FileNameW_FORMAT, FileName_FORMAT);
 		}
 
+		// tries to detect the encoding of a readable, seekeable Stream
+		// detects deterministically: UTF-8, UTF-16LE, UTF-16BE, UTF-32LE, UTF-32BE, GB18030
+		// detects heuristically: UTF-8, UTF-16LE, UTF-16BE
+		// returns null if unsure
 		static Encoding DetectEncoding (Stream stream)
 		{
+			if (stream == null || !stream.CanRead || !stream.CanSeek)
+				return null;
+
 			int length;
-			byte[] x = new byte[6];
+			int pos;
+			// snooping array's length should a multiple of 2 to aid UTF-16 heuristic
+			byte[] x = new byte[512 * 2];
+
+			long start_position = stream.Position;
 
 			length = stream.Read (x, 0, x.Length);
-			if (length < 4)
+
+			try {
+				if (length < 2)
+					return null;
+
+				// deterministic : byte order mark
+				if (x[0] == 0xFE && x[1] == 0xFF)
+					return new UnicodeEncoding(false, true);
+
+				if (x[0] == 0xFF && x[1] == 0xFE)
+					return new UnicodeEncoding(true, true);
+
+				if (length < 3)
+					return null;
+
+				if (x[0] == 0xEF && x[1] == 0xBB && x[2] == 0xBF)
+					return new UTF8Encoding (true);
+
+				if (length < 4)
+					return null;
+
+				if (x[0] == 0x00 && x[1] == 0x00 && x[2] == 0xFE && x[3] == 0xFF)
+					return GetEncoding ("UTF-32BE");
+
+				if (x[0] == 0x00 && x[1] == 0x00 && x[2] == 0xFF && x[3] == 0xFE)
+					return GetEncoding ("UTF-32LE");
+
+				if (x[0] == 0x84 && x[1] == 0x31 && x[2] == 0x95 && x[3] == 0x33)
+					return GetEncoding ("GB18030");
+
+				// heuristic : detect ASCII and report it as UTF-8
+				// - ASCII is a subset of UTF-8
+				for (pos = 0; pos < length; pos++) {
+					int c = 0xFF & x[pos];
+					if (c == '\n' || c == '\r' || c == '\t' ) {
+						// OK
+					} else if (c < ' ' || '~' < c) {
+						break;
+					}
+				}
+				if (pos == length) {
+					return UTF8;
+				}
+
+				// heurisitc : zero detection for UTF16-BE / UTF16-LE
+				// - stream lenght has to be even
+				// - zero count at odd and even positions are wildely different
+				// TODO improve heuristic for non-latin
+				if (stream.Length % 2 == 0) {
+					int[] zeros =  new int[2];
+					for (int i = 0; i < length; i++) {
+						if (0x00 == x[i])
+							zeros[i % 2]++;
+					}
+
+					if (zeros[0] * 3 > length && zeros[1] * 3 < zeros[0])
+						return UTF16BE;
+
+					if (zeros[1] * 3 > length && zeros[0] * 3 < zeros[1])
+						return UTF16LE;
+				}
+
 				return null;
-
-			// deterministic : byte order mark
-			if (x[0] == 0xEF && x[1] == 0xBB && x[2] == 0xBF)
-				return UTF8;
-
-			if (x[0] == 0xFE && x[1] == 0xFF)
-				return UTF16LE;
-
-			if (x[0] == 0xFF && x[1] == 0xFE)
-				return UTF16BE;
-
-			if (x[0] == 0x0 && x[1] == 0x0 && x[2] == 0xFE && x[3] == 0xFF)
-				return GetEncoding ("UTF-32BE");
-
-			if (x[0] == 0x0 && x[1] == 0x0 && x[2] == 0xFF && x[3] == 0xFE)
-				return GetEncoding ("UTF-32LE");
-
-			if (length < 6)
-				return null;
-
-			// heurisitc : zeros
-			// TODO improve heuristic for non-latin
-
-			if (x[0] == 0x0 && x[1] != 0x0 && x[2] == 0x0 && x[3] != 0 && x[4] == 0x0 && x[5] != 0x0)
-				return UTF16BE;
-
-			if (x[0] != 0x0 && x[1] == 0x0 && x[2] != 0x0 && x[3] == 0 && x[4] != 0x0 && x[5] == 0x0)
-				return UTF16LE;
-
-			return null;
+			} finally {
+				stream.Position = start_position;
+			}
 		}
 
 
@@ -1056,11 +1101,10 @@ namespace System.Windows.Forms
 
 					if (encoding == null) {
 						encoding = X11SelectionHandler.DetectEncoding (stream);
-						stream.Seek (0, SeekOrigin.Begin);
 
 						if (encoding == null) {
 							try {
-								encoding = Console.InputEncoding;
+								encoding = Encoding.Default;
 							} catch {
 								// NOP
 							}
@@ -1095,7 +1139,7 @@ namespace System.Windows.Forms
 					encoding = DefaultOutEncoding;
 				else {
 					try {
-						encoding = Console.InputEncoding;
+						encoding = Encoding.Default;
 					} catch {
 						// NOP
 					}
