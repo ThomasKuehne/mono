@@ -93,7 +93,9 @@ namespace System.Windows.Forms
 
 		internal void GetData (ref XEvent xevent, IDataObject data)
 		{
-			if (UnsetTargetPresent (data)) {
+			if (Direction.In != (Dir & Direction.In)) {
+				// NOP
+			} else if (UnsetTargetPresent (data)) {
 				try {
 					Converter.GetData (ref xevent, this, data);
 				} catch {
@@ -109,7 +111,9 @@ namespace System.Windows.Forms
 		internal void SetData (ref XEvent xevent, object data)
 		{
 			try {
-				if (!Converter.SetData (ref xevent, this, data))
+				if (Direction.Out != (Dir & Direction.Out))
+					SetUnsupported (ref xevent);
+				else if (!Converter.SetData (ref xevent, this, data))
 					SetUnsupported (ref xevent);
 			} catch {
 				// always send data or requester is going to timeout
@@ -257,7 +261,7 @@ namespace System.Windows.Forms
 				handler = MIME_HANDLERS[pos];
 				if (raw_name == handler.Name) {
 					if (type_list != null) {
-						if (!type_list.Contains (handler.Type) && (0 != (handler.Dir & Direction.Out)))
+						if (!type_list.Contains (handler.Type) && (Direction.Out == (handler.Dir & Direction.Out)))
 							type_list.Add (handler.Type);
 					} else {
 						return handler;
@@ -272,7 +276,7 @@ namespace System.Windows.Forms
 					if (string.Equals (name, handler.Name, StringComparison.OrdinalIgnoreCase)) {
 						conversion_handler = handler.ForConversion (charset, raw_name);
 						if (type_list != null) {
-							if (!type_list.Contains (conversion_handler.Type) && (0 != (conversion_handler.Dir & Direction.Out)))
+							if (!type_list.Contains (conversion_handler.Type) && (Direction.Out == (conversion_handler.Dir & Direction.Out)))
 								type_list.Add (conversion_handler.Type);
 						} else {
 							return conversion_handler;
@@ -289,7 +293,7 @@ namespace System.Windows.Forms
 						if (string.Equals (netName, handlerNetName, StringComparison.OrdinalIgnoreCase)) {
 							if (type_list != null) {
 								conversion_handler = handler.ForConversion (charset, handler.Name);
-								if (!type_list.Contains (conversion_handler.Type) && (0 != (conversion_handler.Dir & Direction.Out)))
+								if (!type_list.Contains (conversion_handler.Type) && (Direction.Out == (conversion_handler.Dir & Direction.Out)))
 									type_list.Add (conversion_handler.Type);
 							} else {
 								conversion_handler = handler.ForConversion (charset, raw_name);
