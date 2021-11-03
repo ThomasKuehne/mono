@@ -761,9 +761,8 @@ namespace System.Windows.Forms {
 				if (type == (IntPtr) Atom.XA_ATOM && format == 32 &&
 						count.ToInt32() > 0 &&  data != IntPtr.Zero) {
 
-					int intptr_size = Marshal.SizeOf (typeof (IntPtr));
 					for (int i = 0; i < count.ToInt32 (); i++) {
-						IntPtr current_atom = Marshal.ReadIntPtr (data, i * intptr_size);
+						IntPtr current_atom = Marshal.ReadIntPtr (data, i * IntPtr.Size);
 						allowed |= EffectFromAction (current_atom);
 					}
 				}
@@ -1028,7 +1027,7 @@ namespace System.Windows.Forms {
 					return false;
 				}
 
-				int version = Marshal.ReadInt32 (data, 0);
+				int version = Marshal.ReadIntPtr (data, 0).ToInt32 ();
 
 				if (version < 3) {
 					Console.Error.WriteLine ("XDND Version too old (" + version + ").");
@@ -1039,8 +1038,7 @@ namespace System.Windows.Forms {
 				if (count.ToInt32() > 1) {
 					res = false;
 					for (int i = 1; i < count.ToInt32(); i++) {
-						IntPtr type = (IntPtr) Marshal.ReadInt32 (data, i *
-								Marshal.SizeOf (typeof (int)));
+						IntPtr type = Marshal.ReadIntPtr (data, i * IntPtr.Size);
 						for (int j = 0; j < drag_data.SupportedTypes.Length; j++) {
 							if (drag_data.SupportedTypes [j] == type) {
 								res = true;

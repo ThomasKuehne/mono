@@ -637,18 +637,22 @@ namespace System.Windows.Forms
 			}
 
 			// native buffers may only be released after the dnd / copy has finished
-			static void RecordNativeBuffer (IntPtr selection, IntPtr ptr)
+			static IntPtr AllocNativeBuffer (IntPtr selection, int bytes)
 			{
 				ICollection<IntPtr> list;
+				IntPtr ptr;
 
 				if (false == NATIVE_BUFFERS.TryGetValue (selection, out list)) {
 					list = new List<IntPtr> ();
 					NATIVE_BUFFERS.Add (selection, list);
 				}
 
+				ptr = Marshal.AllocHGlobal (bytes);
 				lock (list) {
 					list.Add (ptr);
 				}
+
+				return ptr;
 			}
 
 			internal static void FreeNativeBuffers (IntPtr selection)
@@ -758,7 +762,7 @@ namespace System.Windows.Forms
 					if (length_canary < bytes.Length)
 						length_canary = int.MaxValue;
 
-					buffer = Marshal.AllocHGlobal (length_canary);
+					buffer = AllocNativeBuffer (xevent.SelectionRequestEvent.selection, length_canary);
 
 					// write payload
 					Marshal.Copy (bytes, 0, buffer, bytes.Length);
@@ -766,8 +770,6 @@ namespace System.Windows.Forms
 					// write canary zeros at the end
 					for (int i = bytes.Length; i < length_canary; i++)
 						Marshal.WriteByte (buffer, i, 0);
-
-					RecordNativeBuffer (xevent.SelectionRequestEvent.selection, buffer);
 
 					SetProperty (ref xevent, buffer, bytes.Length);
 				}
@@ -797,7 +799,7 @@ namespace System.Windows.Forms
 					if (length_canary < length)
 						length_canary = int.MaxValue;
 
-					buffer = Marshal.AllocHGlobal (length_canary);
+					buffer = AllocNativeBuffer (xevent.SelectionRequestEvent.selection, length_canary);
 
 					// write payload
 					for (pos = 0; pos < length; pos++) {
@@ -811,8 +813,6 @@ namespace System.Windows.Forms
 					// write canary zeros at the end
 					for (int i = pos; i < length_canary; i++)
 						Marshal.WriteByte (buffer, i, 0);
-
-					RecordNativeBuffer (xevent.SelectionRequestEvent.selection, buffer);
 
 					SetProperty (ref xevent, buffer, pos);
 				}
