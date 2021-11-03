@@ -129,9 +129,12 @@ namespace System.Windows.Forms
 			DataConverter.SetUnsupported (ref xevent);
 		}
 
-		internal int ConvertSelectionDnd (IntPtr display, IntPtr selection, IntPtr toplevel)
+		internal bool ConvertSelectionDnd (IntPtr display, IntPtr selection, IntPtr toplevel)
 		{
-			return XplatUIX11.XConvertSelection (display, selection, Type, NonProtocol, toplevel, IntPtr.Zero /* CurrentTime */);
+			// current time because this is called when we receive XdndEnter
+			// the time stamp is available with XdndPosition and XdndDrop but they happen too late
+			// FIXME call this from the first received XdndPostion / XdndDrop instead of XdndEnter?
+			return 0 == XplatUIX11.XConvertSelection (display, selection, Type, NonProtocol, toplevel, IntPtr.Zero /* CurrentTime */);
 		}
 
 		internal static void FreeNativeSelectionBuffers (IntPtr selection)

@@ -832,14 +832,14 @@ namespace System.Windows.Forms {
 				}
 				return true;
 			}
-
 			foreach (IntPtr atom in SourceSupportedList (ref xevent)) {
 				X11SelectionHandler handler = X11SelectionHandler.Find (atom);
 				if (handler == null)
 					continue;
-				handler.ConvertSelectionDnd (display, XdndSelection, toplevel);
-				converts_pending++;
-				match = true;
+				if (handler.ConvertSelectionDnd (display, XdndSelection, toplevel)) {
+					converts_pending++;
+					match = true;
+				}
 			}
 			return match;
 		}
