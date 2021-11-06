@@ -2502,7 +2502,7 @@ namespace System.Windows.Forms {
 
 		internal override object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
 		{
-			return Clipboard.ClipboardRetrieve (handle, type, converter);
+			return Clipboard.ClipboardRetrieve (handle, type);
 		}
 
 		internal override void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)

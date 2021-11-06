@@ -79,7 +79,7 @@ namespace System.Windows.Forms {
 
 		object		Item;			// Object on the clipboard
 		ArrayList	Formats;		// list of formats available in the clipboard
-		bool		Retrieving;		// true if we are requesting an item
+		IntPtr		Retrieving;		// non-zero if we are requesting an item
 		IntPtr		Enumerating;		// non-zero if we are enumerating through all known types
 
 		void ClearSources ()
@@ -272,16 +272,17 @@ namespace System.Windows.Forms {
 						}
 						Enumerating = IntPtr.Zero;
 						return true;
-					} else if (Retrieving) {
-						Retrieving = false;
+					} else if (Retrieving == xevent.SelectionEvent.selection) {
+						Retrieving = IntPtr.Zero;
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
 							TranslatePropertyToClipboard(xevent.SelectionEvent.property);
 						} else {
 							ClearSources ();
 							Item = null;
 						}
+						return true;
 					}
-			return true;
+			return false;
 		}
 
 		void TranslatePropertyToClipboard(IntPtr property) {
@@ -456,12 +457,12 @@ namespace System.Windows.Forms {
 			return XplatUIX11.XInternAtom(DisplayHandle, format, false).ToInt32();
 		}
 
-		internal object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
+		internal object ClipboardRetrieve(IntPtr handle, int type)
 		{
 			XplatUIX11.XConvertSelection(DisplayHandle, handle, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
 
-			Retrieving = true;
-			while (Retrieving) {
+			Retrieving = handle;
+			while (Retrieving != IntPtr.Zero) {
 				UpdateMessageQueue(null, false);
 			}
 
