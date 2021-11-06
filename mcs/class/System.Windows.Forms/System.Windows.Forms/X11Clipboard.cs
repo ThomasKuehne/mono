@@ -45,7 +45,6 @@ namespace System.Windows.Forms {
 		readonly IntPtr DisplayHandle;
 		readonly IntPtr CLIPBOARD;
 		readonly IntPtr UTF8_STRING;
-		readonly IntPtr UTF16_STRING;
 		readonly IntPtr TARGETS;
 		readonly IntPtr FosterParent;
 
@@ -65,7 +64,6 @@ namespace System.Windows.Forms {
 
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
 			TARGETS = XplatUIX11.XInternAtom (display, "TARGETS", false);
-			UTF16_STRING = XplatUIX11.XInternAtom (display, "UTF16_STRING", false);
 			UTF8_STRING = XplatUIX11.XInternAtom (display, "UTF8_STRING", false);
 		}
 
@@ -140,7 +138,6 @@ namespace System.Windows.Forms {
 						if (IsSourceText) {
 							atoms[atom_count++] = (IntPtr)Atom.XA_STRING;
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
-							atoms[atom_count++] = (IntPtr)UTF16_STRING;
 						} else {
 							// FIXME - handle other types
 						}
@@ -150,7 +147,6 @@ namespace System.Windows.Forms {
 						sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
 					} else if (IsSourceText &&
 					           (format_atom == (IntPtr)Atom.XA_STRING
-					            || format_atom == UTF16_STRING
 					            || format_atom == UTF8_STRING)) {
 						IntPtr	buffer = IntPtr.Zero;
 						int	buflen;
@@ -162,8 +158,6 @@ namespace System.Windows.Forms {
 						IntPtr target_atom = xevent.SelectionRequestEvent.target;
 						if (target_atom == (IntPtr)Atom.XA_STRING)
 							encoding = Encoding.ASCII;
-						else if (target_atom == UTF16_STRING)
-							encoding = Encoding.Unicode;
 						else if (target_atom == UTF8_STRING)
 							encoding = Encoding.UTF8;
 
@@ -261,11 +255,6 @@ namespace System.Windows.Forms {
 					for (int i = 0; i < (int)nitems; i++)
 						buffer [i] = Marshal.ReadByte (prop, i);
 					Item = Encoding.UTF8.GetString (buffer);
-				} else if (property == UTF16_STRING) {
-					byte [] buffer = new byte [(int)nitems];
-					for (int i = 0; i < (int)nitems; i++)
-						buffer [i] = Marshal.ReadByte (prop, i);
-					Item = Encoding.Unicode.GetString (buffer);
 				} else if (property == TARGETS) {
 					for (int pos = 0; pos < (long) nitems; pos++) {
 						IntPtr format = Marshal.ReadIntPtr (prop, pos * IntPtr.Size);
