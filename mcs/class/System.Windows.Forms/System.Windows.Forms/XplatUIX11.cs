@@ -2499,25 +2499,7 @@ namespace System.Windows.Forms {
 				throw new ArgumentException("handle is not a valid clipboard handle");
 			}
 
-			if (format == "Text" ) return (int)Atom.XA_STRING;
-			else if (format == "Bitmap" ) return (int)Atom.XA_BITMAP;
-			//else if (format == "MetaFilePict" ) return 3;
-			//else if (format == "SymbolicLink" ) return 4;
-			//else if (format == "DataInterchangeFormat" ) return 5;
-			//else if (format == "Tiff" ) return 6;
-			else if (format == "OEMText" ) return OEMTEXT.ToInt32();
-			else if (format == "DeviceIndependentBitmap" ) return (int)Atom.XA_PIXMAP;
-			else if (format == "Palette" ) return (int)Atom.XA_COLORMAP;	// Useless
-			//else if (format == "PenData" ) return 10;
-			//else if (format == "RiffAudio" ) return 11;
-			//else if (format == "WaveAudio" ) return 12;
-			else if (format == "UnicodeText" ) return UTF8_STRING.ToInt32();
-			//else if (format == "EnhancedMetafile" ) return 14;
-			//else if (format == "FileDrop" ) return 15;
-			//else if (format == "Locale" ) return 16;
-			else if (format == "Rich Text Format") return RICHTEXTFORMAT.ToInt32 ();
-
-			return XInternAtom(DisplayHandle, format, false).ToInt32();
+			return Clipboard.ClipboardGetID (format);
 		}
 
 		internal override IntPtr ClipboardOpen(bool primary_selection)
