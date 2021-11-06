@@ -95,7 +95,7 @@ namespace System.Windows.Forms {
 
 		// Clipboard
 		static IntPtr 		ClipMagic;
-		static ClipboardData	Clipboard;		// Our clipboard
+		static X11Clipboard	Clipboard;		// Our clipboard
 
 		// Communication
 		static IntPtr		PostAtom;		// PostMessage atom
@@ -109,7 +109,6 @@ namespace System.Windows.Forms {
 		static object wake_waiting_lock = new object ();
 		static X11Keyboard	Keyboard;		//
 		static X11Dnd		Dnd;
-		static X11Clipboard	Clipboard2;
 		static UnixStream	wake;			//
 		static UnixStream	wake_receive;		//
 		static byte[]		network_buffer;		//
@@ -257,7 +256,6 @@ namespace System.Windows.Forms {
 			MessageQueues = Hashtable.Synchronized (new Hashtable(7));
 			unattached_timer_list = ArrayList.Synchronized (new ArrayList (3));
 			messageHold = Hashtable.Synchronized (new Hashtable(3));
-			Clipboard = new ClipboardData ();
 			XInitThreads();
 
 			ErrorExceptions = false;
@@ -511,7 +509,7 @@ namespace System.Windows.Forms {
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
 				Dnd = new X11Dnd (DisplayHandle);
-				Clipboard2 = new X11Clipboard (DisplayHandle);
+				Clipboard = new X11Clipboard (DisplayHandle);
 
 				DoubleClickInterval = 500;
 
@@ -1798,127 +1796,9 @@ namespace System.Windows.Forms {
 				}
 
 				case XEventName.SelectionRequest: {
-					if (Dnd.HandleSelectionRequestEvent (ref xevent))
-						break;
-					XEvent sel_event;
+					if (!Dnd.HandleSelectionRequestEvent (ref xevent))
+						Clipboard.HandleSelectionRequestEvent (ref xevent);
 
-					sel_event = new XEvent();
-					sel_event.SelectionEvent.type = XEventName.SelectionNotify;
-					sel_event.SelectionEvent.send_event = true;
-					sel_event.SelectionEvent.display = DisplayHandle;
-					sel_event.SelectionEvent.selection = xevent.SelectionRequestEvent.selection;
-					sel_event.SelectionEvent.target = xevent.SelectionRequestEvent.target;
-					sel_event.SelectionEvent.requestor = xevent.SelectionRequestEvent.requestor;
-					sel_event.SelectionEvent.time = xevent.SelectionRequestEvent.time;
-					sel_event.SelectionEvent.property = IntPtr.Zero;
-
-					IntPtr format_atom = xevent.SelectionRequestEvent.target;
-
-					// Seems that some apps support asking for supported types
-					if (format_atom == TARGETS) {
-						IntPtr[]	atoms;
-						int	atom_count;
-
-						atoms = new IntPtr[5];
-						atom_count = 0;
-
-						if (Clipboard.IsSourceText) {
-							atoms[atom_count++] = (IntPtr)Atom.XA_STRING;
-							atoms[atom_count++] = (IntPtr)OEMTEXT;
-							atoms[atom_count++] = (IntPtr)UTF8_STRING;
-							atoms[atom_count++] = (IntPtr)UTF16_STRING;
-							atoms[atom_count++] = (IntPtr)RICHTEXTFORMAT;
-						} else if (Clipboard.IsSourceImage) {
-							atoms[atom_count++] = (IntPtr)Atom.XA_PIXMAP;
-							atoms[atom_count++] = (IntPtr)Atom.XA_BITMAP;
-						} else {
-							// FIXME - handle other types
-						}
-
-						XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property, 
-								(IntPtr)Atom.XA_ATOM, 32, PropertyMode.Replace, atoms, atom_count);
-						sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-					} else if (format_atom == (IntPtr)RICHTEXTFORMAT) {
-						string rtf_text = Clipboard.GetRtfText ();
-						if (rtf_text != null) {
-							// The RTF spec mentions that ascii is enough to contain it
-							Byte [] bytes = Encoding.ASCII.GetBytes (rtf_text);
-							int buflen = bytes.Length;
-							IntPtr buffer = Marshal.AllocHGlobal (buflen);
-
-							for (int i = 0; i < buflen; i++)
-								Marshal.WriteByte (buffer, i, bytes[i]);
-
-							XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property,
-									(IntPtr)xevent.SelectionRequestEvent.target, 8, PropertyMode.Replace, buffer, buflen);
-							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-							Marshal.FreeHGlobal(buffer);
-						}
-					} else if (Clipboard.IsSourceText && 
-					           (format_atom == (IntPtr)Atom.XA_STRING 
-					            || format_atom == OEMTEXT
-					            || format_atom == UTF16_STRING
-					            || format_atom == UTF8_STRING)) {
-						IntPtr	buffer = IntPtr.Zero;
-						int	buflen;
-						Encoding encoding = null;
-
-						buflen = 0;
-
-						// Select an encoding depending on the target
-						IntPtr target_atom = xevent.SelectionRequestEvent.target;
-						if (target_atom == (IntPtr)Atom.XA_STRING || target_atom == OEMTEXT)
-							// FIXME - EOMTEXT should encode into ISO2022
-							encoding = Encoding.ASCII;
-						else if (target_atom == UTF16_STRING)
-							encoding = Encoding.Unicode;
-						else if (target_atom == UTF8_STRING)
-							encoding = Encoding.UTF8;
-
-						Byte [] bytes;
-
-						bytes = encoding.GetBytes (Clipboard.GetPlainText ());
-						buffer = Marshal.AllocHGlobal (bytes.Length);
-						buflen = bytes.Length;
-
-						for (int i = 0; i < buflen; i++)
-							Marshal.WriteByte (buffer, i, bytes [i]);
-
-						if (buffer != IntPtr.Zero) {
-							XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property, (IntPtr)xevent.SelectionRequestEvent.target, 8, PropertyMode.Replace, buffer, buflen);
-							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-							Marshal.FreeHGlobal(buffer);
-						}
-					} else if (Clipboard.GetSource (format_atom.ToInt32 ()) != null) { // check if we have an available value of this format
-						if (DataFormats.GetFormat (format_atom.ToInt32 ()).is_serializable) {
-							object serializable = Clipboard.GetSource (format_atom.ToInt32 ());
-
-							BinaryFormatter formatter = new BinaryFormatter ();
-							MemoryStream memory_stream = new MemoryStream ();
-							formatter.Serialize (memory_stream, serializable);
-
-							int buflen = (int)memory_stream.Length;
-							IntPtr buffer = Marshal.AllocHGlobal (buflen);
-							memory_stream.Position = 0;
-							for (int i = 0; i < buflen; i++)
-								Marshal.WriteByte (buffer, i, (byte)memory_stream.ReadByte ());
-							memory_stream.Close ();
-
-							XChangeProperty (DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property, (IntPtr)xevent.SelectionRequestEvent.target,
-									8, PropertyMode.Replace, buffer, buflen);
-							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-							Marshal.FreeHGlobal (buffer);
-						}
-
-					} else if (Clipboard.IsSourceImage) {
-						if (xevent.SelectionEvent.target == (IntPtr)Atom.XA_PIXMAP) {
-							// FIXME - convert image and store as property
-						} else if (xevent.SelectionEvent.target == (IntPtr)Atom.XA_PIXMAP) {
-							// FIXME - convert image and store as property
-						}
-					}
-
-					XSendEvent(DisplayHandle, xevent.SelectionRequestEvent.requestor, false, new IntPtr ((int)EventMask.NoEventMask), ref sel_event);
 					break;
 				}
 
