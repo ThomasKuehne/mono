@@ -669,18 +669,6 @@ namespace System.Windows.Forms
 			return null;
 		}
 
-		sealed class IntPtrComparer : IComparer<IntPtr>
-		{
-			public int Compare (IntPtr ptrA, IntPtr ptrB)
-			{
-				long diff;
-
-				diff = ptrA.ToInt64 ( ) - ptrB.ToInt64 ( );
-
-				return (diff < 0) ? -1 : ((diff == 0) ? 0 : 1);
-			}
-		}
-
 		abstract class DataConverter
 		{
 			internal abstract void GetData (ref XEvent xevent, X11SelectionHandler handler, IDataObject data);
@@ -692,7 +680,7 @@ namespace System.Windows.Forms
 			// 24 <= max(ptr_size) * 3
 			const int CANARY_LENGTH = 24;
 
-			static readonly IDictionary<IntPtr, ICollection<IntPtr>> NATIVE_BUFFERS;
+			static readonly Dictionary<IntPtr, List<IntPtr>> NATIVE_BUFFERS;
 
 			static DataConverter ()
 			{
@@ -700,13 +688,13 @@ namespace System.Windows.Forms
 				for (int i = 0; i < CANARY_LENGTH; i++)
 					Marshal.WriteByte (DUMMY_PTR, i, 0);
 
-				NATIVE_BUFFERS = new SortedDictionary<IntPtr, ICollection<IntPtr>> (new IntPtrComparer ());
+				NATIVE_BUFFERS = new Dictionary<IntPtr, List<IntPtr>> ();
 			}
 
 			// native buffers may only be released after the dnd / copy has finished
 			static IntPtr AllocNativeBuffer (IntPtr selection, int bytes)
 			{
-				ICollection<IntPtr> list;
+				List<IntPtr> list;
 				IntPtr ptr;
 
 				if (false == NATIVE_BUFFERS.TryGetValue (selection, out list)) {
@@ -724,7 +712,7 @@ namespace System.Windows.Forms
 
 			internal static void FreeNativeBuffers (IntPtr selection)
 			{
-				ICollection<IntPtr> list;
+				List<IntPtr> list;
 
 				if (NATIVE_BUFFERS.TryGetValue (selection, out list)) {
 					lock (list) {
