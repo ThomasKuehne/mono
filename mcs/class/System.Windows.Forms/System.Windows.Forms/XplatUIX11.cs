@@ -109,6 +109,7 @@ namespace System.Windows.Forms {
 		static object wake_waiting_lock = new object ();
 		static X11Keyboard	Keyboard;		//
 		static X11Dnd		Dnd;
+		static X11Clipboard	Clipboard2;
 		static UnixStream	wake;			//
 		static UnixStream	wake_receive;		//
 		static byte[]		network_buffer;		//
@@ -510,6 +511,7 @@ namespace System.Windows.Forms {
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
 				Dnd = new X11Dnd (DisplayHandle);
+				Clipboard2 = new X11Clipboard (DisplayHandle);
 
 				DoubleClickInterval = 500;
 

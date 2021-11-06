@@ -30,6 +30,17 @@ using System.Collections.Specialized;
 
 namespace System.Windows.Forms {
 
+	internal class X11Clipboard {
+		readonly IntPtr Display;
+		readonly IntPtr Clipboard;
+
+		internal X11Clipboard (IntPtr display)
+		{
+			Display = display;
+			Clipboard = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
+		}
+	}
+
 	internal class ClipboardData {
 		ListDictionary source_data;			// Source in its different formats, if any
 		string plain_text_source;			// Cached source as plain-text string
