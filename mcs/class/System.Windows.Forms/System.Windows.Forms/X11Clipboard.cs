@@ -136,7 +136,6 @@ namespace System.Windows.Forms {
 						atom_count = 0;
 
 						if (IsSourceText) {
-							atoms[atom_count++] = (IntPtr)Atom.XA_STRING;
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
 						} else {
 							// FIXME - handle other types
@@ -146,8 +145,7 @@ namespace System.Windows.Forms {
 								(IntPtr)Atom.XA_ATOM, 32, PropertyMode.Replace, atoms, atom_count);
 						sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
 					} else if (IsSourceText &&
-					           (format_atom == (IntPtr)Atom.XA_STRING
-					            || format_atom == UTF8_STRING)) {
+					           format_atom == UTF8_STRING) {
 						IntPtr	buffer = IntPtr.Zero;
 						int	buflen;
 						Encoding encoding = null;
@@ -156,9 +154,7 @@ namespace System.Windows.Forms {
 
 						// Select an encoding depending on the target
 						IntPtr target_atom = xevent.SelectionRequestEvent.target;
-						if (target_atom == (IntPtr)Atom.XA_STRING)
-							encoding = Encoding.ASCII;
-						else if (target_atom == UTF8_STRING)
+						if (target_atom == UTF8_STRING)
 							encoding = Encoding.UTF8;
 
 						Byte [] bytes;
@@ -235,22 +231,7 @@ namespace System.Windows.Forms {
 			XplatUIX11.XGetWindowProperty(DisplayHandle, FosterParent, property, IntPtr.Zero, new IntPtr (0x7fffffff), true, (IntPtr)Atom.AnyPropertyType, out actual_atom, out actual_format, out nitems, out bytes_after, ref prop);
 
 			if ((long)nitems > 0) {
-				if (property == (IntPtr)Atom.XA_STRING) {
-					// Xamarin-5116: PtrToStringAnsi expects to get UTF-8, but we might have
-					// Latin-1 instead, in which case it will return null.
-					var s = Marshal.PtrToStringAnsi (prop);
-					if (string.IsNullOrEmpty (s)) {
-						var sb = new StringBuilder ();
-						for (int i = 0; i < (int)nitems; i++) {
-							var b = Marshal.ReadByte (prop, i);
-							sb.Append ((char)b);
-						}
-						s = sb.ToString ();
-					}
-					// Some X managers/apps pass unicode chars as escaped strings, so
-					// we may need to unescape them.
-					Item = UnescapeUnicodeFromAnsi (s);
-				} else if (property == UTF8_STRING) {
+				if (property == UTF8_STRING) {
 					byte [] buffer = new byte [(int)nitems];
 					for (int i = 0; i < (int)nitems; i++)
 						buffer [i] = Marshal.ReadByte (prop, i);
@@ -361,21 +342,7 @@ namespace System.Windows.Forms {
 
 		internal int ClipboardGetID(string format)
 		{
-			if (format == "Text" ) return (int)Atom.XA_STRING;
-			else if (format == "Bitmap" ) return (int)Atom.XA_BITMAP;
-			//else if (format == "MetaFilePict" ) return 3;
-			//else if (format == "SymbolicLink" ) return 4;
-			//else if (format == "DataInterchangeFormat" ) return 5;
-			//else if (format == "Tiff" ) return 6;
-			else if (format == "DeviceIndependentBitmap" ) return (int)Atom.XA_PIXMAP;
-			else if (format == "Palette" ) return (int)Atom.XA_COLORMAP;	// Useless
-			//else if (format == "PenData" ) return 10;
-			//else if (format == "RiffAudio" ) return 11;
-			//else if (format == "WaveAudio" ) return 12;
-			else if (format == "UnicodeText" ) return UTF8_STRING.ToInt32();
-			//else if (format == "EnhancedMetafile" ) return 14;
-			//else if (format == "FileDrop" ) return 15;
-			//else if (format == "Locale" ) return 16;
+			if (format == "UnicodeText" ) return UTF8_STRING.ToInt32();
 
 			return XplatUIX11.XInternAtom(DisplayHandle, format, false).ToInt32();
 		}
