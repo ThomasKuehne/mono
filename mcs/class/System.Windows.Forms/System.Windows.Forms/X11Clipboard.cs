@@ -35,7 +35,6 @@ using System.Drawing;
 using System.IO;
 using System.Net.Mime;
 using System.Runtime.InteropServices;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System;
 
@@ -161,27 +160,6 @@ namespace System.Windows.Forms {
 							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
 							Marshal.FreeHGlobal(buffer);
 						}
-					} else if (GetSource (format_atom.ToInt32 ()) != null) { // check if we have an available value of this format
-						if (DataFormats.GetFormat (format_atom.ToInt32 ()).is_serializable) {
-							object serializable = GetSource (format_atom.ToInt32 ());
-
-							BinaryFormatter formatter = new BinaryFormatter ();
-							MemoryStream memory_stream = new MemoryStream ();
-							formatter.Serialize (memory_stream, serializable);
-
-							int buflen = (int)memory_stream.Length;
-							IntPtr buffer = Marshal.AllocHGlobal (buflen);
-							memory_stream.Position = 0;
-							for (int i = 0; i < buflen; i++)
-								Marshal.WriteByte (buffer, i, (byte)memory_stream.ReadByte ());
-							memory_stream.Close ();
-
-							XplatUIX11.XChangeProperty (DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property, (IntPtr)xevent.SelectionRequestEvent.target,
-									8, PropertyMode.Replace, buffer, buflen);
-							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-							Marshal.FreeHGlobal (buffer);
-						}
-
 					}
 
 					XplatUIX11.XSendEvent(DisplayHandle, xevent.SelectionRequestEvent.requestor, false, new IntPtr ((int)EventMask.NoEventMask), ref sel_event);
@@ -232,17 +210,6 @@ namespace System.Windows.Forms {
 						if (DataFormats.ContainsFormat (format.ToInt32())) {
 							Formats.Add (format);
 						}
-					}
-				} else if (DataFormats.ContainsFormat (property.ToInt32 ())) {
-					if (DataFormats.GetFormat (property.ToInt32 ()).is_serializable) {
-						MemoryStream memory_stream = new MemoryStream ((int)nitems);
-						for (int i = 0; i < (int)nitems; i++)
-							memory_stream.WriteByte (Marshal.ReadByte (prop, i));
-
-						memory_stream.Position = 0;
-						BinaryFormatter formatter = new BinaryFormatter ();
-						Item = formatter.Deserialize (memory_stream);
-						memory_stream.Close ();
 					}
 				}
 
