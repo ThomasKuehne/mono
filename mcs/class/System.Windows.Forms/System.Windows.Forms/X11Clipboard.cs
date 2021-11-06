@@ -267,10 +267,10 @@ namespace System.Windows.Forms {
 		internal bool HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
 					if (Enumerating == xevent.SelectionEvent.selection) {
-						Enumerating = IntPtr.Zero;
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
 							TranslatePropertyToClipboard (xevent.SelectionEvent.property);
 						}
+						Enumerating = IntPtr.Zero;
 						return true;
 					} else if (Retrieving) {
 						Retrieving = false;
@@ -411,11 +411,11 @@ namespace System.Windows.Forms {
 			Formats = new ArrayList();
 
 			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
+			Enumerating = handle;
 			XplatUIX11.XConvertSelection(DisplayHandle, handle, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
 
 			var timeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
 			var startTime = DateTime.Now;
-			Enumerating = handle;
 			while (Enumerating != IntPtr.Zero) {
 				UpdateMessageQueue(null, false);
 
