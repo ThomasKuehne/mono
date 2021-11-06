@@ -45,10 +45,12 @@ namespace System.Windows.Forms {
 		readonly IntPtr UTF8_STRING;
 		readonly IntPtr UTF16_STRING;
 		readonly IntPtr TARGETS;
+		readonly IntPtr FosterParent;
 
-		internal X11Clipboard (IntPtr display)
+		internal X11Clipboard (IntPtr display, IntPtr fosterParent)
 		{
 			DisplayHandle = display;
+			FosterParent = fosterParent;
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
 			OEMTEXT = XplatUIX11.XInternAtom (display, "OEMTEXT", false);
 			RICHTEXTFORMAT = XplatUIX11.XInternAtom (display, "RICHTEXTFORMAT", false);
@@ -249,6 +251,145 @@ namespace System.Windows.Forms {
 					XplatUIX11.XSendEvent(DisplayHandle, xevent.SelectionRequestEvent.requestor, false, new IntPtr ((int)EventMask.NoEventMask), ref sel_event);
 			return true;
 		}
+
+		internal bool HandleSelectionNotifyEvent (ref XEvent xevent)
+		{
+			if (xevent.SelectionEvent.selection != CLIPBOARD)
+				return false;
+
+					if (Enumerating) {
+						Enumerating = false;
+						if (xevent.SelectionEvent.property != IntPtr.Zero) {
+							TranslatePropertyToClipboard (xevent.SelectionEvent.property);
+						}
+					} else if (Retrieving) {
+						Retrieving = false;
+						if (xevent.SelectionEvent.property != IntPtr.Zero) {
+							TranslatePropertyToClipboard(xevent.SelectionEvent.property);
+						} else {
+							ClearSources ();
+							Item = null;
+						}
+					}
+			return true;
+		}
+
+		void TranslatePropertyToClipboard(IntPtr property) {
+			IntPtr			actual_atom;
+			int			actual_format;
+			IntPtr			nitems;
+			IntPtr			bytes_after;
+			IntPtr			prop = IntPtr.Zero;
+
+			Item = null;
+
+			XplatUIX11.XGetWindowProperty(DisplayHandle, FosterParent, property, IntPtr.Zero, new IntPtr (0x7fffffff), true, (IntPtr)Atom.AnyPropertyType, out actual_atom, out actual_format, out nitems, out bytes_after, ref prop);
+
+			if ((long)nitems > 0) {
+				if (property == (IntPtr)Atom.XA_STRING) {
+					// Xamarin-5116: PtrToStringAnsi expects to get UTF-8, but we might have
+					// Latin-1 instead, in which case it will return null.
+					var s = Marshal.PtrToStringAnsi (prop);
+					if (string.IsNullOrEmpty (s)) {
+						var sb = new StringBuilder ();
+						for (int i = 0; i < (int)nitems; i++) {
+							var b = Marshal.ReadByte (prop, i);
+							sb.Append ((char)b);
+						}
+						s = sb.ToString ();
+					}
+					// Some X managers/apps pass unicode chars as escaped strings, so
+					// we may need to unescape them.
+					Item = UnescapeUnicodeFromAnsi (s);
+				} else if (property == (IntPtr)Atom.XA_BITMAP) {
+					// FIXME - convert bitmap to image
+				} else if (property == (IntPtr)Atom.XA_PIXMAP) {
+					// FIXME - convert pixmap to image
+				} else if (property == OEMTEXT) {
+					Item = UnescapeUnicodeFromAnsi (Marshal.PtrToStringAnsi(prop));
+				} else if (property == UTF8_STRING) {
+					byte [] buffer = new byte [(int)nitems];
+					for (int i = 0; i < (int)nitems; i++)
+						buffer [i] = Marshal.ReadByte (prop, i);
+					Item = Encoding.UTF8.GetString (buffer);
+				} else if (property == UTF16_STRING) {
+					byte [] buffer = new byte [(int)nitems];
+					for (int i = 0; i < (int)nitems; i++)
+						buffer [i] = Marshal.ReadByte (prop, i);
+					Item = Encoding.Unicode.GetString (buffer);
+				} else if (property == RICHTEXTFORMAT)
+					Item = Marshal.PtrToStringAnsi(prop);
+				else if (property == TARGETS) {
+					for (int pos = 0; pos < (long) nitems; pos++) {
+						IntPtr format = Marshal.ReadIntPtr (prop, pos * IntPtr.Size);
+						if (DataFormats.ContainsFormat (format.ToInt32())) {
+							Formats.Add (format);
+						}
+					}
+				} else if (DataFormats.ContainsFormat (property.ToInt32 ())) {
+					if (DataFormats.GetFormat (property.ToInt32 ()).is_serializable) {
+						MemoryStream memory_stream = new MemoryStream ((int)nitems);
+						for (int i = 0; i < (int)nitems; i++)
+							memory_stream.WriteByte (Marshal.ReadByte (prop, i));
+
+						memory_stream.Position = 0;
+						BinaryFormatter formatter = new BinaryFormatter ();
+						Item = formatter.Deserialize (memory_stream);
+						memory_stream.Close ();
+					}
+				}
+
+				XplatUIX11.XFree(prop);
+			}
+		}
+
+		string UnescapeUnicodeFromAnsi (string value)
+		{
+			if (value == null || value.IndexOf ("\\u") == -1)
+				return value;
+
+			StringBuilder sb = new StringBuilder (value.Length);
+			int start, pos;
+
+			start = pos = 0;
+			while (start < value.Length) {
+				pos = value.IndexOf ("\\u", start);
+				if (pos == -1)
+					break;
+
+				sb.Append (value, start, pos - start);
+				pos += 2;
+				start = pos;
+
+				int length = 0;
+				while (pos < value.Length && length < 4) {
+					if (!ValidHexDigit (value [pos]))
+						break;
+					length++;
+					pos++;
+				}
+
+				int res;
+				if (!Int32.TryParse (value.Substring (start, length), System.Globalization.NumberStyles.HexNumber,
+							null, out res))
+					return value; // Error, return the unescaped original value.
+
+				sb.Append ((char)res);
+				start = pos;
+			}
+
+			// Append any remaining data.
+			if (start < value.Length)
+				sb.Append (value, start, value.Length - start);
+
+			return sb.ToString ();
+		}
+
+		private static bool ValidHexDigit (char e)
+		{
+			return Char.IsDigit (e) || (e >= 'A' && e <= 'F') || (e >= 'a' && e <= 'f');
+		}
+
 	}
 }
 

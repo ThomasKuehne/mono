@@ -509,7 +509,7 @@ namespace System.Windows.Forms {
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
 				Dnd = new X11Dnd (DisplayHandle);
-				Clipboard = new X11Clipboard (DisplayHandle);
+				Clipboard = new X11Clipboard (DisplayHandle, FosterParent);
 
 				DoubleClickInterval = 500;
 
@@ -1247,123 +1247,6 @@ namespace System.Windows.Forms {
 			return queue;
 		}
 
-		void TranslatePropertyToClipboard(IntPtr property) {
-			IntPtr			actual_atom;
-			int			actual_format;
-			IntPtr			nitems;
-			IntPtr			bytes_after;
-			IntPtr			prop = IntPtr.Zero;
-
-			Clipboard.Item = null;
-
-			XGetWindowProperty(DisplayHandle, FosterParent, property, IntPtr.Zero, new IntPtr (0x7fffffff), true, (IntPtr)Atom.AnyPropertyType, out actual_atom, out actual_format, out nitems, out bytes_after, ref prop);
-
-			if ((long)nitems > 0) {
-				if (property == (IntPtr)Atom.XA_STRING) {
-					// Xamarin-5116: PtrToStringAnsi expects to get UTF-8, but we might have
-					// Latin-1 instead, in which case it will return null.
-					var s = Marshal.PtrToStringAnsi (prop);
-					if (string.IsNullOrEmpty (s)) {
-						var sb = new StringBuilder ();
-						for (int i = 0; i < (int)nitems; i++) {
-							var b = Marshal.ReadByte (prop, i);
-							sb.Append ((char)b);
-						}
-						s = sb.ToString ();
-					}
-					// Some X managers/apps pass unicode chars as escaped strings, so
-					// we may need to unescape them.
-					Clipboard.Item = UnescapeUnicodeFromAnsi (s);
-				} else if (property == (IntPtr)Atom.XA_BITMAP) {
-					// FIXME - convert bitmap to image
-				} else if (property == (IntPtr)Atom.XA_PIXMAP) {
-					// FIXME - convert pixmap to image
-				} else if (property == OEMTEXT) {
-					Clipboard.Item = UnescapeUnicodeFromAnsi (Marshal.PtrToStringAnsi(prop));
-				} else if (property == UTF8_STRING) {
-					byte [] buffer = new byte [(int)nitems];
-					for (int i = 0; i < (int)nitems; i++)
-						buffer [i] = Marshal.ReadByte (prop, i);
-					Clipboard.Item = Encoding.UTF8.GetString (buffer);
-				} else if (property == UTF16_STRING) {
-					byte [] buffer = new byte [(int)nitems];
-					for (int i = 0; i < (int)nitems; i++)
-						buffer [i] = Marshal.ReadByte (prop, i);
-					Clipboard.Item = Encoding.Unicode.GetString (buffer);
-				} else if (property == RICHTEXTFORMAT)
-					Clipboard.Item = Marshal.PtrToStringAnsi(prop);
-				else if (property == TARGETS) {
-					for (int pos = 0; pos < (long) nitems; pos++) {
-						IntPtr format = Marshal.ReadIntPtr (prop, pos * IntPtr.Size);
-						if (DataFormats.ContainsFormat (format.ToInt32())) {
-							Clipboard.Formats.Add (format);
-							DriverDebug("Got supported clipboard atom format: {0}", format);
-						}
-					}
-				} else if (DataFormats.ContainsFormat (property.ToInt32 ())) {
-					if (DataFormats.GetFormat (property.ToInt32 ()).is_serializable) {
-						MemoryStream memory_stream = new MemoryStream ((int)nitems);
-						for (int i = 0; i < (int)nitems; i++)
-							memory_stream.WriteByte (Marshal.ReadByte (prop, i));
-
-						memory_stream.Position = 0;
-						BinaryFormatter formatter = new BinaryFormatter ();
-						Clipboard.Item = formatter.Deserialize (memory_stream);
-						memory_stream.Close ();
-					}
-				}
-
-				XFree(prop);
-			}
-		}
-
-		string UnescapeUnicodeFromAnsi (string value)
-		{
-			if (value == null || value.IndexOf ("\\u") == -1)
-				return value;
-
-			StringBuilder sb = new StringBuilder (value.Length);
-			int start, pos;
-
-			start = pos = 0;
-			while (start < value.Length) {
-				pos = value.IndexOf ("\\u", start);
-				if (pos == -1)
-					break;
-
-				sb.Append (value, start, pos - start);
-				pos += 2;
-				start = pos;
-
-				int length = 0;
-				while (pos < value.Length && length < 4) {
-					if (!ValidHexDigit (value [pos]))
-						break;
-					length++;
-					pos++;
-				}
-
-				int res;
-				if (!Int32.TryParse (value.Substring (start, length), System.Globalization.NumberStyles.HexNumber, 
-							null, out res))
-					return value; // Error, return the unescaped original value.
-				
-				sb.Append ((char)res);
-				start = pos;
-			}
-
-			// Append any remaining data.
-			if (start < value.Length)
-				sb.Append (value, start, value.Length - start);
-
-			return sb.ToString ();
-		}
-
-		private static bool ValidHexDigit (char e)
-		{
-			return Char.IsDigit (e) || (e >= 'A' && e <= 'F') || (e >= 'a' && e <= 'f');
-		}
-
 		void AddExpose (Hwnd hwnd, bool client, int x, int y, int width, int height) {
 			// Don't waste time
 			if ((hwnd == null) || (x > hwnd.Width) || (y > hwnd.Height) || ((x + width) < 0) || ((y + height) < 0)) {
@@ -1803,23 +1686,9 @@ namespace System.Windows.Forms {
 				}
 
 				case XEventName.SelectionNotify: {
-					if (Dnd.HandleSelectionNotifyEvent (ref xevent))
-						break;
+					if (!Dnd.HandleSelectionNotifyEvent (ref xevent))
+						Clipboard.HandleSelectionNotifyEvent (ref xevent);
 
-					if (Clipboard.Enumerating) {
-						Clipboard.Enumerating = false;
-						if (xevent.SelectionEvent.property != IntPtr.Zero) {
-							TranslatePropertyToClipboard (xevent.SelectionEvent.property);
-						}
-					} else if (Clipboard.Retrieving) {
-						Clipboard.Retrieving = false;
-						if (xevent.SelectionEvent.property != IntPtr.Zero) {
-							TranslatePropertyToClipboard(xevent.SelectionEvent.property);
-						} else {
-							Clipboard.ClearSources ();
-							Clipboard.Item = null;
-						}
-					}
 					break;
 				}
 
