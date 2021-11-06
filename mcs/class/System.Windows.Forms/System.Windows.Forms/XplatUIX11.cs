@@ -2507,7 +2507,7 @@ namespace System.Windows.Forms {
 
 		internal override void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
 		{
-			Clipboard.ClipboardStore (handle, obj, type, converter, copy);
+			Clipboard.ClipboardStore (handle, obj, type, copy);
 		}
 
 		internal override void CreateCaret (IntPtr handle, int width, int height)

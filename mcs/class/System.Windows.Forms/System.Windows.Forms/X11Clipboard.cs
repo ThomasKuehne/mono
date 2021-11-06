@@ -81,7 +81,6 @@ namespace System.Windows.Forms {
 		ArrayList	Formats;		// list of formats available in the clipboard
 		bool		Retrieving;		// true if we are requesting an item
 		bool		Enumerating;		// true if we are enumerating through all known types
-		XplatUI.ObjectToClipboard Converter;
 
 		void ClearSources ()
 		{
@@ -471,10 +470,8 @@ namespace System.Windows.Forms {
 			return Item;
 		}
 
-		internal void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
+		internal void ClipboardStore (IntPtr handle, object obj, int type, bool copy)
 		{
-			Converter = converter;
-
 			if (obj != null) {
 				AddSource (type, obj);
 				XplatUIX11.XSetSelectionOwner (DisplayHandle, CLIPBOARD, FosterParent, IntPtr.Zero);
