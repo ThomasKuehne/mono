@@ -101,13 +101,6 @@ namespace System.Windows.Forms {
 			return plain_text_source;
 		}
 
-		bool IsSourceText {
-			get {
-				return plain_text_source != null;
-			}
-		}
-
-
 		internal bool HandleSelectionRequestEvent (ref XEvent xevent)
 		{
 			if (xevent.SelectionRequestEvent.selection != CLIPBOARD)
@@ -135,17 +128,14 @@ namespace System.Windows.Forms {
 						atoms = new IntPtr[5];
 						atom_count = 0;
 
-						if (IsSourceText) {
+						if (plain_text_source != null) {
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
-						} else {
-							// FIXME - handle other types
 						}
 
 						XplatUIX11.XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property,
 								(IntPtr)Atom.XA_ATOM, 32, PropertyMode.Replace, atoms, atom_count);
 						sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-					} else if (IsSourceText &&
-					           format_atom == UTF8_STRING) {
+					} else if (plain_text_source != null && format_atom == UTF8_STRING) {
 						IntPtr	buffer = IntPtr.Zero;
 						int	buflen;
 						Encoding encoding = null;
