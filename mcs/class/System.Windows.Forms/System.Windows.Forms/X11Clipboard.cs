@@ -47,6 +47,8 @@ namespace System.Windows.Forms {
 		readonly IntPtr TARGETS;
 		readonly IntPtr FosterParent;
 
+		internal IntPtr ClipMagic;
+
 		internal delegate void UpdateMessageQueueDG (XEventQueue queue, bool allowIdle);
 
 		UpdateMessageQueueDG UpdateMessageQueue;

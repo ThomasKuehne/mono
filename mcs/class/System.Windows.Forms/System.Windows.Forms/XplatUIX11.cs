@@ -94,7 +94,6 @@ namespace System.Windows.Forms {
 		int                     render_first_error;
 
 		// Clipboard
-		static IntPtr 		ClipMagic;
 		static X11Clipboard	Clipboard;		// Our clipboard
 
 		// Communication
@@ -509,7 +508,9 @@ namespace System.Windows.Forms {
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
 				Dnd = new X11Dnd (DisplayHandle);
+
 				Clipboard = new X11Clipboard (DisplayHandle, FosterParent, UpdateMessageQueue);
+				Clipboard.ClipMagic = CLIPBOARD;
 
 				DoubleClickInterval = 500;
 
@@ -2487,7 +2488,7 @@ namespace System.Windows.Forms {
 
 		internal override void ClipboardClose(IntPtr handle)
 		{
-			if (handle != ClipMagic) {
+			if (handle != Clipboard.ClipMagic) {
 				throw new ArgumentException("handle is not a valid clipboard handle");
 			}
 			return;
@@ -2495,7 +2496,7 @@ namespace System.Windows.Forms {
 
 		internal override int ClipboardGetID(IntPtr handle, string format)
 		{
-			if (handle != ClipMagic) {
+			if (handle != Clipboard.ClipMagic) {
 				throw new ArgumentException("handle is not a valid clipboard handle");
 			}
 
@@ -2505,10 +2506,10 @@ namespace System.Windows.Forms {
 		internal override IntPtr ClipboardOpen(bool primary_selection)
 		{
 			if (!primary_selection)
-				ClipMagic = CLIPBOARD;
+				Clipboard.ClipMagic = CLIPBOARD;
 			else
-				ClipMagic = PRIMARY;
-			return ClipMagic;
+				Clipboard.ClipMagic = PRIMARY;
+			return Clipboard.ClipMagic;
 		}
 
 		internal override object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
