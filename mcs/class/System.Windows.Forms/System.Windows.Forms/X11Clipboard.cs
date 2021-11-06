@@ -80,7 +80,7 @@ namespace System.Windows.Forms {
 		object		Item;			// Object on the clipboard
 		ArrayList	Formats;		// list of formats available in the clipboard
 		bool		Retrieving;		// true if we are requesting an item
-		bool		Enumerating;		// true if we are enumerating through all known types
+		IntPtr		Enumerating;		// non-zero if we are enumerating through all known types
 
 		void ClearSources ()
 		{
@@ -266,14 +266,12 @@ namespace System.Windows.Forms {
 
 		internal bool HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
-			if (xevent.SelectionEvent.selection != CLIPBOARD)
-				return false;
-
-					if (Enumerating) {
-						Enumerating = false;
+					if (Enumerating == xevent.SelectionEvent.selection) {
+						Enumerating = IntPtr.Zero;
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
 							TranslatePropertyToClipboard (xevent.SelectionEvent.property);
 						}
+						return true;
 					} else if (Retrieving) {
 						Retrieving = false;
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
@@ -406,19 +404,19 @@ namespace System.Windows.Forms {
 			int[]			result;
 
 
-			if (XplatUIX11.XGetSelectionOwner(DisplayHandle, CLIPBOARD) == IntPtr.Zero) {
+			if (XplatUIX11.XGetSelectionOwner(DisplayHandle, handle) == IntPtr.Zero) {
 				return null;
 			}
 
 			Formats = new ArrayList();
 
 			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
-			XplatUIX11.XConvertSelection(DisplayHandle, CLIPBOARD, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
+			XplatUIX11.XConvertSelection(DisplayHandle, handle, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
 
 			var timeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
 			var startTime = DateTime.Now;
-			Enumerating = true;
-			while (Enumerating) {
+			Enumerating = handle;
+			while (Enumerating != IntPtr.Zero) {
 				UpdateMessageQueue(null, false);
 
 				if (DateTime.Now - startTime > timeToWaitForSelectionFormats)
