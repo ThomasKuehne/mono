@@ -64,12 +64,14 @@ namespace System.Windows.Forms {
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
 			TARGETS = XplatUIX11.XInternAtom (display, "TARGETS", false);
 			UTF8_STRING = XplatUIX11.XInternAtom (display, "UTF8_STRING", false);
+
+			Items = new Dictionary<IntPtr, object>();
 		}
 
 		ListDictionary source_data;			// Source in its different formats, if any
 		string plain_text_source;			// Cached source as plain-text string
 
-		object		Item;			// Object on the clipboard
+		Dictionary<IntPtr, object> Items;	// Object on the clipboard
 		ArrayList	Formats;		// list of formats available in the clipboard
 		IntPtr		Retrieving;		// non-zero if we are requesting an item
 		IntPtr		Enumerating;		// non-zero if we are enumerating through all known types
@@ -170,16 +172,18 @@ namespace System.Windows.Forms {
 		{
 					if (Enumerating == xevent.SelectionEvent.selection) {
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
-							TranslatePropertyToClipboard (xevent.SelectionEvent.property);
+							TranslatePropertyToClipboard (xevent.SelectionEvent.selection,
+									xevent.SelectionEvent.property);
 						}
 						Enumerating = IntPtr.Zero;
 						return true;
 					} else if (Retrieving == xevent.SelectionEvent.selection) {
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
-							TranslatePropertyToClipboard(xevent.SelectionEvent.property);
+							TranslatePropertyToClipboard(xevent.SelectionEvent.selection,
+									xevent.SelectionEvent.property);
 						} else {
 							ClearSources ();
-							Item = null;
+							Items.Remove(xevent.SelectionEvent.selection);
 						}
 						Retrieving = IntPtr.Zero;
 						return true;
@@ -187,14 +191,14 @@ namespace System.Windows.Forms {
 			return false;
 		}
 
-		void TranslatePropertyToClipboard(IntPtr property) {
+		void TranslatePropertyToClipboard(IntPtr selection, IntPtr property) {
 			IntPtr			actual_atom;
 			int			actual_format;
 			IntPtr			nitems;
 			IntPtr			bytes_after;
 			IntPtr			prop = IntPtr.Zero;
 
-			Item = null;
+			Items.Remove(selection);
 
 			XplatUIX11.XGetWindowProperty(DisplayHandle, FosterParent, property, IntPtr.Zero, new IntPtr (0x7fffffff), true, (IntPtr)Atom.AnyPropertyType, out actual_atom, out actual_format, out nitems, out bytes_after, ref prop);
 
@@ -203,7 +207,7 @@ namespace System.Windows.Forms {
 					byte [] buffer = new byte [(int)nitems];
 					for (int i = 0; i < (int)nitems; i++)
 						buffer [i] = Marshal.ReadByte (prop, i);
-					Item = Encoding.UTF8.GetString (buffer);
+					Items.Add(selection, Encoding.UTF8.GetString (buffer));
 				} else if (property == TARGETS) {
 					for (int pos = 0; pos < (long) nitems; pos++) {
 						IntPtr format = Marshal.ReadIntPtr (prop, pos * IntPtr.Size);
@@ -257,16 +261,17 @@ namespace System.Windows.Forms {
 			return XplatUIX11.XInternAtom(DisplayHandle, format, false).ToInt32();
 		}
 
-		internal object ClipboardRetrieve(IntPtr handle, int type)
+		internal object ClipboardRetrieve(IntPtr selection, int type)
 		{
-			Retrieving = handle;
-			XplatUIX11.XConvertSelection(DisplayHandle, handle, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
+			Retrieving = selection;
+			XplatUIX11.XConvertSelection(DisplayHandle, selection, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
 
 			while (Retrieving != IntPtr.Zero) {
 				UpdateMessageQueue(null, false);
 			}
 
-			return Item;
+			object obj;
+			return Items.TryGetValue(selection, out obj) ? obj : null;
 		}
 
 		internal void ClipboardStore (IntPtr handle, object obj, int type, bool copy)
