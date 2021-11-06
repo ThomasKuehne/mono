@@ -473,11 +473,12 @@ namespace System.Windows.Forms {
 		{
 			if (obj != null) {
 				AddSource (type, obj);
-				XplatUIX11.XSetSelectionOwner (DisplayHandle, CLIPBOARD, FosterParent, IntPtr.Zero);
+				XplatUIX11.XSetSelectionOwner (DisplayHandle, handle, FosterParent, IntPtr.Zero);
 
 				if (copy) {
 					try {
-						var clipboardAtom = XplatUIX11.gdk_atom_intern ("CLIPBOARD", true);
+						var clipboardName = XplatUIX11.XGetAtomName (XplatUIX11.Display, handle);
+						var clipboardAtom = XplatUIX11.gdk_atom_intern (clipboardName, true);
 						var clipboard = XplatUIX11.gtk_clipboard_get (clipboardAtom);
 						if (clipboard != IntPtr.Zero) {
 							// for now we only store text
@@ -496,7 +497,7 @@ namespace System.Windows.Forms {
 			} else {
 				// Clearing the selection
 				ClearSources ();
-				XplatUIX11.XSetSelectionOwner (DisplayHandle, CLIPBOARD, IntPtr.Zero, IntPtr.Zero);
+				XplatUIX11.XSetSelectionOwner (DisplayHandle, handle, IntPtr.Zero, IntPtr.Zero);
 			}
 		}
 	}
