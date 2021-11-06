@@ -217,53 +217,6 @@ namespace System.Windows.Forms {
 			}
 		}
 
-		static string UnescapeUnicodeFromAnsi (string value)
-		{
-			if (value == null || value.IndexOf ("\\u") == -1)
-				return value;
-
-			StringBuilder sb = new StringBuilder (value.Length);
-			int start, pos;
-
-			start = pos = 0;
-			while (start < value.Length) {
-				pos = value.IndexOf ("\\u", start);
-				if (pos == -1)
-					break;
-
-				sb.Append (value, start, pos - start);
-				pos += 2;
-				start = pos;
-
-				int length = 0;
-				while (pos < value.Length && length < 4) {
-					if (!ValidHexDigit (value [pos]))
-						break;
-					length++;
-					pos++;
-				}
-
-				int res;
-				if (!Int32.TryParse (value.Substring (start, length), System.Globalization.NumberStyles.HexNumber,
-							null, out res))
-					return value; // Error, return the unescaped original value.
-
-				sb.Append ((char)res);
-				start = pos;
-			}
-
-			// Append any remaining data.
-			if (start < value.Length)
-				sb.Append (value, start, value.Length - start);
-
-			return sb.ToString ();
-		}
-
-		static bool ValidHexDigit (char e)
-		{
-			return Char.IsDigit (e) || (e >= 'A' && e <= 'F') || (e >= 'a' && e <= 'f');
-		}
-
 		internal int[] ClipboardAvailableFormats(IntPtr handle) {
 			int[]			result;
 
