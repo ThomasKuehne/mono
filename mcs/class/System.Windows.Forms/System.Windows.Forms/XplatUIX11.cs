@@ -202,11 +202,7 @@ namespace System.Windows.Forms {
 		static IntPtr CLIPBOARD;
 		static IntPtr PRIMARY;
 		//static IntPtr DIB;
-		static IntPtr OEMTEXT;
 		static IntPtr UTF8_STRING;
-		static IntPtr UTF16_STRING;
-		static IntPtr RICHTEXTFORMAT;
-		static IntPtr TARGETS;
 
 		// mouse hover message generation
 		static HoverStruct	HoverState;		//
@@ -626,11 +622,7 @@ namespace System.Windows.Forms {
 				"_NET_WM_WINDOW_TYPE_NORMAL",
 				"CLIPBOARD",
 				"PRIMARY",
-				"COMPOUND_TEXT",
 				"UTF8_STRING",
-				"UTF16_STRING",
-				"RICHTEXTFORMAT",
-				"TARGETS",
 				"_SWF_AsyncAtom",
 				"_SWF_PostMessageAtom",
 				"_SWF_HoverAtom" };
@@ -702,11 +694,7 @@ namespace System.Windows.Forms {
 			_NET_WM_WINDOW_TYPE_NORMAL = atoms [off++];
 			CLIPBOARD = atoms [off++];
 			PRIMARY = atoms [off++];
-			OEMTEXT = atoms [off++];
 			UTF8_STRING = atoms [off++];
-			UTF16_STRING = atoms [off++];
-			RICHTEXTFORMAT = atoms [off++];
-			TARGETS = atoms [off++];
 			AsyncAtom = atoms [off++];
 			PostAtom = atoms [off++];
 			HoverState.Atom = atoms [off++];
