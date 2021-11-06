@@ -17,10 +17,14 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
+// Copyright (c) 2004-2006 Novell, Inc.
 // Copyright (c) 2009 Novell, Inc.
+// Copyright (c) 2021 Thomas Kuehne
 //
 // Authors:
+//	Peter Bartok	pbartok@novell.com
 //	Carlos Alberto Cortez (calberto.cortez@gmail.com)
+//	Thomas Kuehne	thomas@kuehne.cn
 //
 
 using System.Collections.Generic;
@@ -73,20 +77,20 @@ namespace System.Windows.Forms {
 		string plain_text_source;			// Cached source as plain-text string
 		Image image_source;				// Cached source as image
 
-		internal object		Item;			// Object on the clipboard
-		internal ArrayList	Formats;		// list of formats available in the clipboard
-		internal bool		Retrieving;		// true if we are requesting an item
-		internal bool		Enumerating;		// true if we are enumerating through all known types
-		internal XplatUI.ObjectToClipboard Converter;
+		object		Item;			// Object on the clipboard
+		ArrayList	Formats;		// list of formats available in the clipboard
+		bool		Retrieving;		// true if we are requesting an item
+		bool		Enumerating;		// true if we are enumerating through all known types
+		XplatUI.ObjectToClipboard Converter;
 
-		public void ClearSources ()
+		void ClearSources ()
 		{
 			source_data.Clear ();
 			plain_text_source = null;
 			image_source = null;
 		}
 
-		public void AddSource (int type, object source)
+		void AddSource (int type, object source)
 		{
 			// Try to detect plain text, based on the old behaviour of XplatUIX11, which usually assigns
 			// -1 as the type when a string is stored in the Clipboard
@@ -98,17 +102,17 @@ namespace System.Windows.Forms {
 			source_data [type] = source;
 		}
 
-		public object GetSource (int type)
+		object GetSource (int type)
 		{
 			return source_data [type];
 		}
 
-		public string GetPlainText ()
+		string GetPlainText ()
 		{
 			return plain_text_source;
 		}
 
-		public string GetRtfText ()
+		string GetRtfText ()
 		{
 			DataFormats.Format format = DataFormats.GetFormat (DataFormats.Rtf);
 			if (format == null)
@@ -117,18 +121,18 @@ namespace System.Windows.Forms {
 			return (string)GetSource (format.Id);
 		}
 
-		public Image GetImage ()
+		Image GetImage ()
 		{
 			return image_source;
 		}
 
-		public bool IsSourceText {
+		bool IsSourceText {
 			get {
 				return plain_text_source != null;
 			}
 		}
 
-		public bool IsSourceImage {
+		bool IsSourceImage {
 			get {
 				return image_source != null;
 			}
@@ -352,7 +356,7 @@ namespace System.Windows.Forms {
 			}
 		}
 
-		string UnescapeUnicodeFromAnsi (string value)
+		static string UnescapeUnicodeFromAnsi (string value)
 		{
 			if (value == null || value.IndexOf ("\\u") == -1)
 				return value;
@@ -394,7 +398,7 @@ namespace System.Windows.Forms {
 			return sb.ToString ();
 		}
 
-		private static bool ValidHexDigit (char e)
+		static bool ValidHexDigit (char e)
 		{
 			return Char.IsDigit (e) || (e >= 'A' && e <= 'F') || (e >= 'a' && e <= 'f');
 		}
