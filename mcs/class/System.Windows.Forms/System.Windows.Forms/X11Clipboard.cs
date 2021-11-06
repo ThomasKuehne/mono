@@ -452,6 +452,18 @@ namespace System.Windows.Forms {
 
 			return XplatUIX11.XInternAtom(DisplayHandle, format, false).ToInt32();
 		}
+
+		internal object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
+		{
+			XplatUIX11.XConvertSelection(DisplayHandle, handle, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
+
+			Retrieving = true;
+			while (Retrieving) {
+				UpdateMessageQueue(null, false);
+			}
+
+			return Item;
+		}
 	}
 }
 

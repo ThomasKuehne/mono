@@ -2513,14 +2513,7 @@ namespace System.Windows.Forms {
 
 		internal override object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
 		{
-			XConvertSelection(DisplayHandle, handle, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
-
-			Clipboard.Retrieving = true;
-			while (Clipboard.Retrieving) {
-				UpdateMessageQueue(null, false);
-			}
-
-			return Clipboard.Item;
+			return Clipboard.ClipboardRetrieve (handle, type, converter);
 		}
 
 		internal override void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
