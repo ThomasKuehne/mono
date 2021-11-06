@@ -44,7 +44,6 @@ namespace System.Windows.Forms {
 	internal class X11Clipboard {
 		readonly IntPtr DisplayHandle;
 		readonly IntPtr CLIPBOARD;
-		readonly IntPtr OEMTEXT;
 		readonly IntPtr RICHTEXTFORMAT;
 		readonly IntPtr UTF8_STRING;
 		readonly IntPtr UTF16_STRING;
@@ -66,7 +65,6 @@ namespace System.Windows.Forms {
 			source_data = new ListDictionary ();
 
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
-			OEMTEXT = XplatUIX11.XInternAtom (display, "OEMTEXT", false);
 			RICHTEXTFORMAT = XplatUIX11.XInternAtom (display, "RICHTEXTFORMAT", false);
 			TARGETS = XplatUIX11.XInternAtom (display, "TARGETS", false);
 			UTF16_STRING = XplatUIX11.XInternAtom (display, "UTF16_STRING", false);
@@ -152,7 +150,6 @@ namespace System.Windows.Forms {
 
 						if (IsSourceText) {
 							atoms[atom_count++] = (IntPtr)Atom.XA_STRING;
-							atoms[atom_count++] = (IntPtr)OEMTEXT;
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
 							atoms[atom_count++] = (IntPtr)UTF16_STRING;
 							atoms[atom_count++] = (IntPtr)RICHTEXTFORMAT;
@@ -181,7 +178,6 @@ namespace System.Windows.Forms {
 						}
 					} else if (IsSourceText &&
 					           (format_atom == (IntPtr)Atom.XA_STRING
-					            || format_atom == OEMTEXT
 					            || format_atom == UTF16_STRING
 					            || format_atom == UTF8_STRING)) {
 						IntPtr	buffer = IntPtr.Zero;
@@ -192,8 +188,7 @@ namespace System.Windows.Forms {
 
 						// Select an encoding depending on the target
 						IntPtr target_atom = xevent.SelectionRequestEvent.target;
-						if (target_atom == (IntPtr)Atom.XA_STRING || target_atom == OEMTEXT)
-							// FIXME - EOMTEXT should encode into ISO2022
+						if (target_atom == (IntPtr)Atom.XA_STRING)
 							encoding = Encoding.ASCII;
 						else if (target_atom == UTF16_STRING)
 							encoding = Encoding.Unicode;
@@ -289,12 +284,6 @@ namespace System.Windows.Forms {
 					// Some X managers/apps pass unicode chars as escaped strings, so
 					// we may need to unescape them.
 					Item = UnescapeUnicodeFromAnsi (s);
-				} else if (property == (IntPtr)Atom.XA_BITMAP) {
-					// FIXME - convert bitmap to image
-				} else if (property == (IntPtr)Atom.XA_PIXMAP) {
-					// FIXME - convert pixmap to image
-				} else if (property == OEMTEXT) {
-					Item = UnescapeUnicodeFromAnsi (Marshal.PtrToStringAnsi(prop));
 				} else if (property == UTF8_STRING) {
 					byte [] buffer = new byte [(int)nitems];
 					for (int i = 0; i < (int)nitems; i++)
@@ -419,7 +408,6 @@ namespace System.Windows.Forms {
 			//else if (format == "SymbolicLink" ) return 4;
 			//else if (format == "DataInterchangeFormat" ) return 5;
 			//else if (format == "Tiff" ) return 6;
-			else if (format == "OEMText" ) return OEMTEXT.ToInt32();
 			else if (format == "DeviceIndependentBitmap" ) return (int)Atom.XA_PIXMAP;
 			else if (format == "Palette" ) return (int)Atom.XA_COLORMAP;	// Useless
 			//else if (format == "PenData" ) return 10;
