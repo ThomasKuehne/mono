@@ -273,13 +273,13 @@ namespace System.Windows.Forms {
 						Enumerating = IntPtr.Zero;
 						return true;
 					} else if (Retrieving == xevent.SelectionEvent.selection) {
-						Retrieving = IntPtr.Zero;
 						if (xevent.SelectionEvent.property != IntPtr.Zero) {
 							TranslatePropertyToClipboard(xevent.SelectionEvent.property);
 						} else {
 							ClearSources ();
 							Item = null;
 						}
+						Retrieving = IntPtr.Zero;
 						return true;
 					}
 			return false;
@@ -459,9 +459,9 @@ namespace System.Windows.Forms {
 
 		internal object ClipboardRetrieve(IntPtr handle, int type)
 		{
+			Retrieving = handle;
 			XplatUIX11.XConvertSelection(DisplayHandle, handle, (IntPtr)type, (IntPtr)type, FosterParent, IntPtr.Zero);
 
-			Retrieving = handle;
 			while (Retrieving != IntPtr.Zero) {
 				UpdateMessageQueue(null, false);
 			}
