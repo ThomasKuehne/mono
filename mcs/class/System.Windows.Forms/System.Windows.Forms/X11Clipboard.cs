@@ -75,7 +75,6 @@ namespace System.Windows.Forms {
 
 		ListDictionary source_data;			// Source in its different formats, if any
 		string plain_text_source;			// Cached source as plain-text string
-		Image image_source;				// Cached source as image
 
 		object		Item;			// Object on the clipboard
 		ArrayList	Formats;		// list of formats available in the clipboard
@@ -86,7 +85,6 @@ namespace System.Windows.Forms {
 		{
 			source_data.Clear ();
 			plain_text_source = null;
-			image_source = null;
 		}
 
 		void AddSource (int type, object source)
@@ -95,8 +93,6 @@ namespace System.Windows.Forms {
 			// -1 as the type when a string is stored in the Clipboard
 			if (source is string && (type == DataFormats.GetFormat (DataFormats.Text).Id || type == -1))
 				plain_text_source = source as string;
-			else if (source is Image)
-				image_source = source as Image;
 
 			source_data [type] = source;
 		}
@@ -120,22 +116,12 @@ namespace System.Windows.Forms {
 			return (string)GetSource (format.Id);
 		}
 
-		Image GetImage ()
-		{
-			return image_source;
-		}
-
 		bool IsSourceText {
 			get {
 				return plain_text_source != null;
 			}
 		}
 
-		bool IsSourceImage {
-			get {
-				return image_source != null;
-			}
-		}
 
 		internal bool HandleSelectionRequestEvent (ref XEvent xevent)
 		{
@@ -170,9 +156,6 @@ namespace System.Windows.Forms {
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
 							atoms[atom_count++] = (IntPtr)UTF16_STRING;
 							atoms[atom_count++] = (IntPtr)RICHTEXTFORMAT;
-						} else if (IsSourceImage) {
-							atoms[atom_count++] = (IntPtr)Atom.XA_PIXMAP;
-							atoms[atom_count++] = (IntPtr)Atom.XA_BITMAP;
 						} else {
 							// FIXME - handle other types
 						}
@@ -252,12 +235,6 @@ namespace System.Windows.Forms {
 							Marshal.FreeHGlobal (buffer);
 						}
 
-					} else if (IsSourceImage) {
-						if (xevent.SelectionEvent.target == (IntPtr)Atom.XA_PIXMAP) {
-							// FIXME - convert image and store as property
-						} else if (xevent.SelectionEvent.target == (IntPtr)Atom.XA_PIXMAP) {
-							// FIXME - convert image and store as property
-						}
 					}
 
 					XplatUIX11.XSendEvent(DisplayHandle, xevent.SelectionRequestEvent.requestor, false, new IntPtr ((int)EventMask.NoEventMask), ref sel_event);
