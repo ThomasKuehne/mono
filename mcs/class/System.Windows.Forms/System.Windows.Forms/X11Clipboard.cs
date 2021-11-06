@@ -44,7 +44,6 @@ namespace System.Windows.Forms {
 	internal class X11Clipboard {
 		readonly IntPtr DisplayHandle;
 		readonly IntPtr CLIPBOARD;
-		readonly IntPtr RICHTEXTFORMAT;
 		readonly IntPtr UTF8_STRING;
 		readonly IntPtr UTF16_STRING;
 		readonly IntPtr TARGETS;
@@ -65,7 +64,6 @@ namespace System.Windows.Forms {
 			source_data = new ListDictionary ();
 
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
-			RICHTEXTFORMAT = XplatUIX11.XInternAtom (display, "RICHTEXTFORMAT", false);
 			TARGETS = XplatUIX11.XInternAtom (display, "TARGETS", false);
 			UTF16_STRING = XplatUIX11.XInternAtom (display, "UTF16_STRING", false);
 			UTF8_STRING = XplatUIX11.XInternAtom (display, "UTF8_STRING", false);
@@ -103,15 +101,6 @@ namespace System.Windows.Forms {
 		string GetPlainText ()
 		{
 			return plain_text_source;
-		}
-
-		string GetRtfText ()
-		{
-			DataFormats.Format format = DataFormats.GetFormat (DataFormats.Rtf);
-			if (format == null)
-				return null; // FIXME - is RTF not supported on any system?
-
-			return (string)GetSource (format.Id);
 		}
 
 		bool IsSourceText {
@@ -152,7 +141,6 @@ namespace System.Windows.Forms {
 							atoms[atom_count++] = (IntPtr)Atom.XA_STRING;
 							atoms[atom_count++] = (IntPtr)UTF8_STRING;
 							atoms[atom_count++] = (IntPtr)UTF16_STRING;
-							atoms[atom_count++] = (IntPtr)RICHTEXTFORMAT;
 						} else {
 							// FIXME - handle other types
 						}
@@ -160,22 +148,6 @@ namespace System.Windows.Forms {
 						XplatUIX11.XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property,
 								(IntPtr)Atom.XA_ATOM, 32, PropertyMode.Replace, atoms, atom_count);
 						sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-					} else if (format_atom == (IntPtr)RICHTEXTFORMAT) {
-						string rtf_text = GetRtfText ();
-						if (rtf_text != null) {
-							// The RTF spec mentions that ascii is enough to contain it
-							Byte [] bytes = Encoding.ASCII.GetBytes (rtf_text);
-							int buflen = bytes.Length;
-							IntPtr buffer = Marshal.AllocHGlobal (buflen);
-
-							for (int i = 0; i < buflen; i++)
-								Marshal.WriteByte (buffer, i, bytes[i]);
-
-							XplatUIX11.XChangeProperty(DisplayHandle, xevent.SelectionRequestEvent.requestor, (IntPtr)xevent.SelectionRequestEvent.property,
-									(IntPtr)xevent.SelectionRequestEvent.target, 8, PropertyMode.Replace, buffer, buflen);
-							sel_event.SelectionEvent.property = xevent.SelectionRequestEvent.property;
-							Marshal.FreeHGlobal(buffer);
-						}
 					} else if (IsSourceText &&
 					           (format_atom == (IntPtr)Atom.XA_STRING
 					            || format_atom == UTF16_STRING
@@ -294,9 +266,7 @@ namespace System.Windows.Forms {
 					for (int i = 0; i < (int)nitems; i++)
 						buffer [i] = Marshal.ReadByte (prop, i);
 					Item = Encoding.Unicode.GetString (buffer);
-				} else if (property == RICHTEXTFORMAT)
-					Item = Marshal.PtrToStringAnsi(prop);
-				else if (property == TARGETS) {
+				} else if (property == TARGETS) {
 					for (int pos = 0; pos < (long) nitems; pos++) {
 						IntPtr format = Marshal.ReadIntPtr (prop, pos * IntPtr.Size);
 						if (DataFormats.ContainsFormat (format.ToInt32())) {
@@ -417,7 +387,6 @@ namespace System.Windows.Forms {
 			//else if (format == "EnhancedMetafile" ) return 14;
 			//else if (format == "FileDrop" ) return 15;
 			//else if (format == "Locale" ) return 16;
-			else if (format == "Rich Text Format") return RICHTEXTFORMAT.ToInt32 ();
 
 			return XplatUIX11.XInternAtom(DisplayHandle, format, false).ToInt32();
 		}
@@ -447,9 +416,7 @@ namespace System.Windows.Forms {
 						var clipboard = XplatUIX11.gtk_clipboard_get (clipboardAtom);
 						if (clipboard != IntPtr.Zero) {
 							// for now we only store text
-							var text = GetRtfText ();
-							if (string.IsNullOrEmpty (text))
-								text = GetPlainText ();
+							var text = GetPlainText ();
 							if (!string.IsNullOrEmpty (text)) {
 								XplatUIX11.gtk_clipboard_set_text (clipboard, text, text.Length);
 								XplatUIX11.gtk_clipboard_store (clipboard);
