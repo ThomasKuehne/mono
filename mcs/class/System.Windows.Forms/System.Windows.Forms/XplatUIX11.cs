@@ -2518,35 +2518,7 @@ namespace System.Windows.Forms {
 
 		internal override void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
 		{
-			Clipboard.Converter = converter;
-
-			if (obj != null) {
-				Clipboard.AddSource (type, obj);
-				XSetSelectionOwner (DisplayHandle, CLIPBOARD, FosterParent, IntPtr.Zero);
-
-				if (copy) {
-					try {
-						var clipboardAtom = gdk_atom_intern ("CLIPBOARD", true);
-						var clipboard = gtk_clipboard_get (clipboardAtom);
-						if (clipboard != IntPtr.Zero) {
-							// for now we only store text
-							var text = Clipboard.GetRtfText ();
-							if (string.IsNullOrEmpty (text))
-								text = Clipboard.GetPlainText ();
-							if (!string.IsNullOrEmpty (text)) {
-								gtk_clipboard_set_text (clipboard, text, text.Length);
-								gtk_clipboard_store (clipboard);
-							}
-						}
-					} catch {
-						// ignore any errors - most likely because gtk isn't installed?
-					}
-				}
-			} else {
-				// Clearing the selection
-				Clipboard.ClearSources ();
-				XSetSelectionOwner (DisplayHandle, CLIPBOARD, IntPtr.Zero, IntPtr.Zero);
-			}
+			Clipboard.ClipboardStore (handle, obj, type, converter, copy);
 		}
 
 		internal override void CreateCaret (IntPtr handle, int width, int height)

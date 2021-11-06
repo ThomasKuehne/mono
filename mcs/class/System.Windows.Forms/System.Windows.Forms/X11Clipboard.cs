@@ -464,6 +464,39 @@ namespace System.Windows.Forms {
 
 			return Item;
 		}
+
+		internal void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
+		{
+			Converter = converter;
+
+			if (obj != null) {
+				AddSource (type, obj);
+				XplatUIX11.XSetSelectionOwner (DisplayHandle, CLIPBOARD, FosterParent, IntPtr.Zero);
+
+				if (copy) {
+					try {
+						var clipboardAtom = XplatUIX11.gdk_atom_intern ("CLIPBOARD", true);
+						var clipboard = XplatUIX11.gtk_clipboard_get (clipboardAtom);
+						if (clipboard != IntPtr.Zero) {
+							// for now we only store text
+							var text = GetRtfText ();
+							if (string.IsNullOrEmpty (text))
+								text = GetPlainText ();
+							if (!string.IsNullOrEmpty (text)) {
+								XplatUIX11.gtk_clipboard_set_text (clipboard, text, text.Length);
+								XplatUIX11.gtk_clipboard_store (clipboard);
+							}
+						}
+					} catch {
+						// ignore any errors - most likely because gtk isn't installed?
+					}
+				}
+			} else {
+				// Clearing the selection
+				ClearSources ();
+				XplatUIX11.XSetSelectionOwner (DisplayHandle, CLIPBOARD, IntPtr.Zero, IntPtr.Zero);
+			}
+		}
 	}
 }
 
