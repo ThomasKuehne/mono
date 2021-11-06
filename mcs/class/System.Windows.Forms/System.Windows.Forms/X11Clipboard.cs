@@ -47,17 +47,24 @@ namespace System.Windows.Forms {
 		readonly IntPtr TARGETS;
 		readonly IntPtr FosterParent;
 
-		internal X11Clipboard (IntPtr display, IntPtr fosterParent)
+		internal delegate void UpdateMessageQueueDG (XEventQueue queue, bool allowIdle);
+
+		UpdateMessageQueueDG UpdateMessageQueue;
+
+		internal X11Clipboard (IntPtr display, IntPtr fosterParent, UpdateMessageQueueDG updateMessageQueue)
 		{
 			DisplayHandle = display;
 			FosterParent = fosterParent;
+			UpdateMessageQueue = updateMessageQueue;
+
+			source_data = new ListDictionary ();
+
 			CLIPBOARD = XplatUIX11.XInternAtom (display, "CLIPBOARD", false);
 			OEMTEXT = XplatUIX11.XInternAtom (display, "OEMTEXT", false);
 			RICHTEXTFORMAT = XplatUIX11.XInternAtom (display, "RICHTEXTFORMAT", false);
 			TARGETS = XplatUIX11.XInternAtom (display, "TARGETS", false);
 			UTF16_STRING = XplatUIX11.XInternAtom (display, "UTF16_STRING", false);
 			UTF8_STRING = XplatUIX11.XInternAtom (display, "UTF8_STRING", false);
-			source_data = new ListDictionary ();
 		}
 
 		ListDictionary source_data;			// Source in its different formats, if any
@@ -390,6 +397,38 @@ namespace System.Windows.Forms {
 			return Char.IsDigit (e) || (e >= 'A' && e <= 'F') || (e >= 'a' && e <= 'f');
 		}
 
+		internal int[] ClipboardAvailableFormats(IntPtr handle) {
+			int[]			result;
+
+
+			if (XplatUIX11.XGetSelectionOwner(DisplayHandle, CLIPBOARD) == IntPtr.Zero) {
+				return null;
+			}
+
+			Formats = new ArrayList();
+
+			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
+			XplatUIX11.XConvertSelection(DisplayHandle, CLIPBOARD, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
+
+			var timeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
+			var startTime = DateTime.Now;
+			Enumerating = true;
+			while (Enumerating) {
+				UpdateMessageQueue(null, false);
+
+				if (DateTime.Now - startTime > timeToWaitForSelectionFormats)
+					break;
+			}
+
+			result = new int[Formats.Count];
+
+			for (int i = 0; i < Formats.Count; i++) {
+				result[i] = ((IntPtr)Formats[i]).ToInt32 ();
+			}
+
+			Formats = null;
+			return result;
+		}
 	}
 }
 

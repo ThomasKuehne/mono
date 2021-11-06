@@ -509,7 +509,7 @@ namespace System.Windows.Forms {
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
 				Dnd = new X11Dnd (DisplayHandle);
-				Clipboard = new X11Clipboard (DisplayHandle, FosterParent);
+				Clipboard = new X11Clipboard (DisplayHandle, FosterParent, UpdateMessageQueue);
 
 				DoubleClickInterval = 500;
 
@@ -2482,36 +2482,7 @@ namespace System.Windows.Forms {
 
 		internal override int[] ClipboardAvailableFormats(IntPtr handle)
 		{
-			int[]			result;
-
-
-			if (XGetSelectionOwner(DisplayHandle, CLIPBOARD) == IntPtr.Zero) {
-				return null;
-			}
-
-			Clipboard.Formats = new ArrayList();
-
-			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
-			XConvertSelection(DisplayHandle, CLIPBOARD, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
-
-			var timeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
-			var startTime = DateTime.Now;
-			Clipboard.Enumerating = true;
-			while (Clipboard.Enumerating) {
-				UpdateMessageQueue(null, false);
-
-				if (DateTime.Now - startTime > timeToWaitForSelectionFormats)
-					break;
-			}
-
-			result = new int[Clipboard.Formats.Count];
-
-			for (int i = 0; i < Clipboard.Formats.Count; i++) {
-				result[i] = ((IntPtr)Clipboard.Formats[i]).ToInt32 ();
-			}
-
-			Clipboard.Formats = null;
-			return result;
+			return Clipboard.ClipboardAvailableFormats(handle);
 		}
 
 		internal override void ClipboardClose(IntPtr handle)
