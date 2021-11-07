@@ -129,6 +129,11 @@ namespace System.Windows.Forms
 			DataConverter.SetUnsupported (ref xevent);
 		}
 
+		internal static void SetEmpty (ref XEvent xevent)
+		{
+			DataConverter.SetEmpty (ref xevent);
+		}
+
 		internal bool ConvertSelectionDnd (IntPtr display, IntPtr selection, IntPtr toplevel)
 		{
 			// current time because this is called when we receive XdndEnter

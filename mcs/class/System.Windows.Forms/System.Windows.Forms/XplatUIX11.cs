@@ -1673,7 +1673,7 @@ namespace System.Windows.Forms {
 					break;
 
 				case XEventName.SelectionClear: {
-Console.Out.WriteLine($"SelectionClear {xevent}");
+Console.Out.WriteLine("XplatUIX11.SelectionClear");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionClearEvent.selection) {
 							selection.HandleSelectionClearEvent (ref xevent);
@@ -1684,7 +1684,7 @@ Console.Out.WriteLine($"SelectionClear {xevent}");
 				}
 
 				case XEventName.SelectionRequest: {
-Console.Out.WriteLine($"SelectionRequest {xevent}");
+Console.Out.WriteLine("XplatUIX11.SelectionRequest");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionRequestEvent.selection) {
 							selection.HandleSelectionRequestEvent (ref xevent);
@@ -1695,7 +1695,7 @@ Console.Out.WriteLine($"SelectionRequest {xevent}");
 				}
 
 				case XEventName.SelectionNotify: {
-Console.Out.WriteLine($"SelectionNotify {xevent}");
+Console.Out.WriteLine("XplatUIX11.SelectionNotify");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionEvent.selection) {
 							selection.HandleSelectionNotifyEvent (ref xevent);

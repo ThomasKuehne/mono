@@ -64,8 +64,8 @@ namespace System.Windows.Forms {
 
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
-Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
 			if (FormatsFetch && xevent.SelectionEvent.target == TARGETS) {
+Console.Out.WriteLine("X11Clipboard.HandleSelectionNotifyEvent TARGETS");
 				if (xevent.SelectionEvent.property != IntPtr.Zero) {
 					Formats = X11SelectionHandler.ConvertTypeList(xevent.AnyEvent.display,
 						    xevent.AnyEvent.window,
@@ -73,12 +73,13 @@ Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
 				}
 				FormatsFetch = false;
 			} else {
+Console.Out.WriteLine("X11Clipboard.HandleSelectionNotifyEvent Content");
 				base.HandleSelectionNotifyEvent (ref xevent);
 			}
 		}
 
 		internal override void HandleSelectionClearEvent (ref XEvent xevent) {
-Console.Out.WriteLine($"X11Clipboard.HandleSelectionClearEvent {xevent}");
+Console.Out.WriteLine("X11Clipboard.HandleSelectionClearEvent");
 			base.HandleSelectionClearEvent (ref xevent);
 			Content = null;
 		}
@@ -117,7 +118,7 @@ Console.Out.WriteLine("X11Clipboard.GetContent");
 		}
 
 		internal void SetContent (object data, bool copy) {
-Console.Out.WriteLine($"X11Clipboard.SetContent {data} {copy}");
+Console.Out.WriteLine($"X11Clipboard.SetContent {data.GetType().FullName} {copy}");
 			var iData = data as IDataObject;
 			if (data != null && iData == null) {
 				iData = new DataObject();
@@ -129,6 +130,7 @@ Console.Out.WriteLine($"X11Clipboard.SetContent {data} {copy}");
 
 			if (copy){
 				// TODO
+				throw new NotImplementedException("permanent copy to GTK not jet implemented");
 			}
 		}
 	}
