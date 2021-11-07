@@ -933,35 +933,11 @@ namespace System.Windows.Forms {
 		{
 			IntPtr [] res;
 
-
 			if (((int) xevent.ClientMessageEvent.ptr2 & 0x1) == 1) {
-				IntPtr type;
-				int format;
-				IntPtr count;
-				IntPtr remaining;
-				IntPtr data = IntPtr.Zero;
+				res = X11SelectionHandler.ReadTypeList(XplatUIX11.Display, source, XdndTypeList);
 
-				XplatUIX11.XGetWindowProperty (XplatUIX11.Display, source, XdndTypeList,
-						IntPtr.Zero, new IntPtr(32), false, (IntPtr) Atom.XA_ATOM,
-						out type, out format, out count,
-						out remaining, ref data);
-
-				try {
-					if (type == (IntPtr) Atom.XA_ATOM && format == 32 &&
-						count.ToInt32() > 0 || data != IntPtr.Zero) {
-
-						res = new IntPtr [count.ToInt32()];
-						for (int i = 0; i < res.Length; i++) {
-							// X11R7.7: format 32 is actually padded 64 for 64 bit processes
-							res [i] = Marshal.ReadIntPtr(data, i * IntPtr.Size);
-						}
-
-						return res;
-					}
-				} finally {
-					if (data != IntPtr.Zero)
-						XplatUIX11.XFree (data);
-				}
+				if (res != null)
+					return res;
 			}
 
 			res = new IntPtr [3];

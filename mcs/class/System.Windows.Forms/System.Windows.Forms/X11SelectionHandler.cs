@@ -669,6 +669,42 @@ namespace System.Windows.Forms
 			return null;
 		}
 
+		internal static IntPtr[] ReadTypeList (IntPtr source_display, IntPtr source_window, IntPtr type_property)
+		{
+			IntPtr type;
+			int format;
+			IntPtr count;
+			IntPtr remaining;
+			IntPtr data = IntPtr.Zero;
+
+			XplatUIX11.XGetWindowProperty (source_display, source_window, type_property,
+				IntPtr.Zero, new IntPtr(32), false, (IntPtr) Atom.XA_ATOM,
+				out type, out format, out count,
+				out remaining, ref data);
+
+			try {
+				if (remaining.ToInt64() > 0)
+					throw new NotImplementedException("0 < remaining");
+
+				if (type == (IntPtr) Atom.XA_ATOM && format == 32 &&
+					count.ToInt32() > 0 && data != IntPtr.Zero) {
+
+					var res = new IntPtr [count.ToInt32()];
+					for (int i = 0; i < res.Length; i++) {
+						// X11R7.7: format 32 is actually padded 64 for 64 bit processes
+						res [i] = Marshal.ReadIntPtr(data, i * IntPtr.Size);
+					}
+
+					return res;
+				}
+
+				return null;
+			} finally {
+				if (data != IntPtr.Zero)
+					XplatUIX11.XFree (data);
+			}
+		}
+
 		abstract class DataConverter
 		{
 			internal abstract void GetData (ref XEvent xevent, X11SelectionHandler handler, IDataObject data);
