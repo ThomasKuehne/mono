@@ -44,15 +44,17 @@ namespace System.Windows.Forms {
 		internal delegate void UpdateMessageQueueDG (XEventQueue queue, bool allowIdle);
 
 		readonly IntPtr TARGETS;
+		readonly IntPtr FosterParent;
 		readonly UpdateMessageQueueDG UpdateMessageQueue;
 		readonly TimeSpan TimeToWaitForSelectionFormats;
 		
 		bool Enumerating;		// value is zero if we are querying available formats
 
-		internal X11Clipboard (string selection, UpdateMessageQueueDG updateMessageQueue)
+		internal X11Clipboard (string selection, UpdateMessageQueueDG updateMessageQueue, IntPtr fosterParent)
 			: base (selection)
 		{
 			UpdateMessageQueue = updateMessageQueue;
+			FosterParent = fosterParent;
 
 
 			TARGETS = XplatUIX11.XInternAtom (XplatUIX11.Display, "TARGETS", false);
@@ -89,7 +91,7 @@ Console.Out.WriteLine("X11Clipboard.GetFormats");
 			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
 			Enumerating = true;
 
-			XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, XplatUIX11.RootWindowHandle, IntPtr.Zero);
+			XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
 
 			var startTime = DateTime.UtcNow;
 			while (Enumerating) {
@@ -105,7 +107,7 @@ Console.Out.WriteLine("X11Clipboard.GetFormats");
 		internal void Clear () {
 Console.Out.WriteLine("X11Clipboard.Clear");
 			Content = null;
-			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, XplatUIX11.RootWindowHandle, IntPtr.Zero);
+			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, IntPtr.Zero, IntPtr.Zero);
 		}
 
 		internal IDataObject GetContent () {

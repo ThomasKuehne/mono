@@ -507,8 +507,8 @@ namespace System.Windows.Forms {
 				Dnd = new X11Dnd ();
 
 				Clipboards = new []{
-					new X11Clipboard ("CLIPBOARD", UpdateMessageQueue),
-					new X11Clipboard ("PRIMARY", UpdateMessageQueue)
+					new X11Clipboard ("CLIPBOARD", UpdateMessageQueue, FosterParent),
+					new X11Clipboard ("PRIMARY", UpdateMessageQueue, FosterParent)
 				};
 
 				Selections = new X11Selection[] {Dnd, Clipboards[0], Clipboards[1]};
@@ -1673,6 +1673,7 @@ namespace System.Windows.Forms {
 					break;
 
 				case XEventName.SelectionClear: {
+Console.Out.WriteLine($"SelectionClear {xevent}");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionClearEvent.selection) {
 							selection.HandleSelectionClearEvent (ref xevent);
@@ -1683,6 +1684,7 @@ namespace System.Windows.Forms {
 				}
 
 				case XEventName.SelectionRequest: {
+Console.Out.WriteLine($"SelectionRequest {xevent}");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionRequestEvent.selection) {
 							selection.HandleSelectionRequestEvent (ref xevent);
@@ -1693,6 +1695,7 @@ namespace System.Windows.Forms {
 				}
 
 				case XEventName.SelectionNotify: {
+Console.Out.WriteLine($"SelectionNotify {xevent}");
 					foreach (var selection in Selections) {
 						if (selection.Selection == xevent.SelectionEvent.selection) {
 							selection.HandleSelectionNotifyEvent (ref xevent);

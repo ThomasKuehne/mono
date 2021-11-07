@@ -46,6 +46,7 @@ Console.Out.WriteLine($"X11Selection.HandleSelectionRequestEvent {xevent}");
 
 		internal virtual void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
+Console.Out.WriteLine($"X11Selection.HandleSelectionNotifyEvent {xevent}");
 			// we requested something the source right now doesn't support
 			if (xevent.SelectionEvent.property == IntPtr.Zero)
 				return;
