@@ -59,7 +59,7 @@ namespace System.Windows.Forms {
 
 			TARGETS = XplatUIX11.XInternAtom (XplatUIX11.Display, "TARGETS", false);
 
-			TimeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
+			TimeToWaitForSelectionFormats = TimeSpan.FromSeconds(10);
 		}
 
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
@@ -108,38 +108,49 @@ Console.Out.WriteLine("X11Clipboard.GetFormats - native");
 
 		internal void Clear () {
 Console.Out.WriteLine("X11Clipboard.Clear");
-			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, IntPtr.Zero, IntPtr.Zero);
-
-			// to avoid race-conditions with handleSelectionClearEvent
+			// to avoid race-conditions even though HandleSelectionClearEvent is responsible
 			Outgoing = null;
+
+			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, IntPtr.Zero, IntPtr.Zero);
 		}
 
 		internal IDataObject GetContent () {
 Console.Out.WriteLine("X11Clipboard.GetContent");
 			if (Outgoing != null) {
+Console.Out.WriteLine("   Mono2Mono");
 				// from mono - to mono
 				return Outgoing;
 			}
 
 			Incomming = new DataObject();
 
-			var owner = XplatUIX11.XGetSelectionOwner (XplatUIX11.Display, Selection);
-			if (owner == IntPtr.Zero)
+			if (IntPtr.Zero == XplatUIX11.XGetSelectionOwner (XplatUIX11.Display, Selection)) {
+Console.Out.WriteLine("   no selection owner");
 				return Incomming;
+			}
 
 			var fake_dnd = new XClientMessageEvent();
 			fake_dnd.ptr2 = (IntPtr) 1; // use window property
 
-			var handlers = X11SelectionHandler.TypeListHandlers(XplatUIX11.Display, owner, TARGETS, ref fake_dnd);
+			var handlers = X11SelectionHandler.TypeListHandlers(XplatUIX11.Display, FosterParent, TARGETS, ref fake_dnd);
+
+Console.Out.WriteLine("   handlers {0}", handlers.Length);
 
 			foreach (var handler in handlers){
-				Console.Out.WriteLine(handler);/*
-				// TODO locking
-				if (X11SelectionHandler.ConvertSelectionClipboard(XplatUIX11.Display, Selection, FosterParent)){
-					ConvertPending++
-				}*/
+				handler.ConvertSelectionClipboard(XplatUIX11.Display, Selection, FosterParent);
+Console.Out.WriteLine("+   handler {0}", handler);
+				ConvertsPending++;
 			}
-			// TODO wait
+
+			// TODO >> fix waiting
+			var startTime = DateTime.UtcNow;
+			while (0 < ConvertsPending) {
+				UpdateMessageQueue(null, false);
+
+				if (DateTime.UtcNow - startTime > TimeToWaitForSelectionFormats)
+					break;
+			}
+			// TODO << fix waiting
 			return Incomming;
 		}
 
@@ -156,7 +167,7 @@ Console.Out.WriteLine($"X11Clipboard.SetContent {data.GetType().FullName} {copy}
 
 			if (copy){
 				// TODO
-				throw new NotImplementedException("permanent copy to GTK not jet implemented");
+				// throw new NotImplementedException("permanent copy to GTK not yet implemented");
 			}
 		}
 	}

@@ -144,7 +144,7 @@ namespace System.Windows.Forms
 
 		internal bool ConvertSelectionClipboard (IntPtr display, IntPtr selection, IntPtr toplevel)
 		{
-			return 0 == XplatUIX11.XConvertSelection (display, selection, Type, Type, toplevel, IntPtr.Zero /* CurrentTime */);
+			return 1 == XplatUIX11.XConvertSelection (display, selection, Type, Type, toplevel, IntPtr.Zero /* CurrentTime */);
 		}
 
 		internal static void FreeNativeSelectionBuffers (IntPtr selection)
