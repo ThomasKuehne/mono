@@ -485,8 +485,7 @@ namespace System.Windows.Forms {
 				XplatUIX11.XDeleteProperty (XplatUIX11.Display, drag_data.Window, XdndTypeList);
 				drag_data = null;
 			}
-
-			X11SelectionHandler.FreeNativeSelectionBuffers(Selection);
+			base.HandleSelectionClearEvent (ref xevent);
 		}
 
 		bool QueryContinue (bool escape, DragAction action)

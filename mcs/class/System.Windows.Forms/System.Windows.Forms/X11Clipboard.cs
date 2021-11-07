@@ -96,7 +96,7 @@ Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
 
 		internal override void HandleSelectionClearEvent (ref XEvent xevent) {
 Console.Out.WriteLine($"X11Clipboard.HandleSelectionClearEvent {xevent}");
-			X11SelectionHandler.FreeNativeSelectionBuffers (Selection);
+			base.HandleSelectionClearEvent (ref xevent);
 			Content = null;
 		}
 
