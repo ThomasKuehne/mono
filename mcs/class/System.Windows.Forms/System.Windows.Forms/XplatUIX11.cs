@@ -94,7 +94,8 @@ namespace System.Windows.Forms {
 		int                     render_first_error;
 
 		// Clipboard
-		static X11Clipboard	Clipboard;		// Our clipboard
+		static X11Clipboard[]	Clipboards;		// Our clipboards
+		static X11Selection[]	Selections;		// clipboards and DND
 
 		// Communication
 		static IntPtr		PostAtom;		// PostMessage atom
@@ -503,10 +504,19 @@ namespace System.Windows.Forms {
 				pollfds [1].events = PollEvents.POLLIN;
 
 				Keyboard = new X11Keyboard(DisplayHandle, FosterParent);
-				Dnd = new X11Dnd (DisplayHandle);
+				Dnd = new X11Dnd ();
 
-				Clipboard = new X11Clipboard (DisplayHandle, FosterParent, UpdateMessageQueue);
-				Clipboard.ClipMagic = CLIPBOARD;
+				Clipboards = new []{
+					new X11Clipboard ("CLIPBOARD", UpdateMessageQueue),
+					new X11Clipboard ("PRIMARY", UpdateMessageQueue)
+				};
+
+				Selections = new X11Selection[] {Dnd, Clipboards[0], Clipboards[1]};
+
+				XplatUI.ClipboardGetContent = ClipboardGetContentImp;
+				XplatUI.ClipboardGetFormats = ClipboardGetFormatsImp;
+				XplatUI.ClipboardSetContent = ClipboardSetContentImp;
+				XplatUI.ClipboardClear = ClipboardClearImp;
 
 				DoubleClickInterval = 500;
 
@@ -1663,21 +1673,32 @@ namespace System.Windows.Forms {
 					break;
 
 				case XEventName.SelectionClear: {
-					// Should we do something?
+					foreach (var selection in Selections) {
+						if (selection.Selection == xevent.SelectionClearEvent.selection) {
+							selection.HandleSelectionClearEvent (ref xevent);
+							break;
+						}
+					}
 					break;
 				}
 
 				case XEventName.SelectionRequest: {
-					if (!Dnd.HandleSelectionRequestEvent (ref xevent))
-						Clipboard.HandleSelectionRequestEvent (ref xevent);
-
+					foreach (var selection in Selections) {
+						if (selection.Selection == xevent.SelectionRequestEvent.selection) {
+							selection.HandleSelectionRequestEvent (ref xevent);
+							break;
+						}
+					}
 					break;
 				}
 
 				case XEventName.SelectionNotify: {
-					if (!Dnd.HandleSelectionNotifyEvent (ref xevent))
-						Clipboard.HandleSelectionNotifyEvent (ref xevent);
-
+					foreach (var selection in Selections) {
+						if (selection.Selection == xevent.SelectionEvent.selection) {
+							selection.HandleSelectionNotifyEvent (ref xevent);
+							break;
+						}
+					}
 					break;
 				}
 
@@ -2469,45 +2490,57 @@ namespace System.Windows.Forms {
 			y = dest_y_return;
 		}
 
+
+		[Obsolete("ClipboardAvailableFormats is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override int[] ClipboardAvailableFormats(IntPtr handle)
 		{
-			return Clipboard.ClipboardAvailableFormats(handle);
+			throw new NotImplementedException ("ClipboardAvailableFormats is deprecated for X11, use System.Windows.Forms.Clipboard instead");
 		}
 
+		[Obsolete("ClipboardClose is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override void ClipboardClose(IntPtr handle)
 		{
-			if (handle != Clipboard.ClipMagic) {
-				throw new ArgumentException("handle is not a valid clipboard handle");
-			}
-			return;
+			// NOP
 		}
 
+		[Obsolete("ClipboardGetID is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override int ClipboardGetID(IntPtr handle, string format)
 		{
-			if (handle != Clipboard.ClipMagic) {
-				throw new ArgumentException("handle is not a valid clipboard handle");
-			}
-
-			return Clipboard.ClipboardGetID (format);
+			return  XplatUIX11.XInternAtom (DisplayHandle, format, false).ToInt32 ();
 		}
 
+		[Obsolete("ClipboardOpen is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override IntPtr ClipboardOpen(bool primary_selection)
 		{
-			if (!primary_selection)
-				Clipboard.ClipMagic = CLIPBOARD;
-			else
-				Clipboard.ClipMagic = PRIMARY;
-			return Clipboard.ClipMagic;
+			return Clipboards[primary_selection ? 1 : 0].Selection;
 		}
 
+		[Obsolete("ClipboardRetrieve is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override object ClipboardRetrieve(IntPtr handle, int type, XplatUI.ClipboardToObject converter)
 		{
-			return Clipboard.ClipboardRetrieve (handle, type);
+			throw new NotImplementedException ("ClipboardRetrieveis obsolete for X11, use System.Windows.Forms.Clipboard instead");
 		}
 
+		[Obsolete("ClipboardStore is obsolete for X11, use System.Windows.Forms.Clipboard instead", true)]
 		internal override void ClipboardStore (IntPtr handle, object obj, int type, XplatUI.ObjectToClipboard converter, bool copy)
 		{
-			Clipboard.ClipboardStore (handle, obj, type, copy);
+			throw new NotImplementedException ("ClipboardStore obsolete for X11, use System.Windows.Forms.Clipboard instead");
+		}
+
+		string[] ClipboardGetFormatsImp (bool primary_selection) {
+			return Clipboards[primary_selection ? 1 : 0].GetFormats ();
+		}
+
+		IDataObject ClipboardGetContentImp (bool primary_selection) {
+			return Clipboards[primary_selection ? 1 : 0].GetContent ();
+		}
+
+		void ClipboardSetContentImp (bool primary_selection, object data, bool copy) {
+			Clipboards[primary_selection ? 1 : 0].SetContent (data, copy);
+		}
+
+		void ClipboardClearImp (bool primary_selection) {
+			Clipboards[primary_selection ? 1 : 0].Clear ();
 		}
 
 		internal override void CreateCaret (IntPtr handle, int width, int height)
