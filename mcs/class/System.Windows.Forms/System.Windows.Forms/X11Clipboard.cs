@@ -125,6 +125,7 @@ Console.Out.WriteLine($"X11Clipboard.SetContent {data} {copy}");
 			}
 
 			Content = iData;
+			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, FosterParent, IntPtr.Zero);
 
 			if (copy){
 				// TODO
