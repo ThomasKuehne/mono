@@ -44,7 +44,21 @@ Console.Out.WriteLine($"X11Selection.HandleSelectionRequestEvent {xevent}");
 			}
 		}
 
-		internal abstract void HandleSelectionNotifyEvent (ref XEvent xevent);
+		internal virtual void HandleSelectionNotifyEvent (ref XEvent xevent)
+		{
+			// we requested something the source right now doesn't support
+			if (xevent.SelectionEvent.property == IntPtr.Zero)
+				return;
+
+			X11SelectionHandler handler = X11SelectionHandler.Find ((IntPtr) xevent.SelectionEvent.target);
+			if (handler == null)
+				return;
+
+			if (Content == null)
+				Content = new DataObject ();
+
+			handler.GetData (ref xevent, Content);
+		}
 		
 		internal virtual void HandleSelectionClearEvent (ref XEvent xevent) {
 Console.Out.WriteLine($"X11Selection.HandleSelectionClearEvent {xevent}");

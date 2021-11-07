@@ -445,18 +445,7 @@ namespace System.Windows.Forms {
 
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
-			// we requested something the source right now doesn't support
-			if (xevent.SelectionEvent.property == IntPtr.Zero)
-				return;
-
-			X11SelectionHandler handler = X11SelectionHandler.Find ((IntPtr) xevent.SelectionEvent.target);
-			if (handler == null)
-				return;
-
-			if (Content == null)
-				Content = new DataObject ();
-
-			handler.GetData (ref xevent, Content);
+			base.HandleSelectionNotifyEvent (ref xevent);
 
 			converts_pending--;
 			if (converts_pending <= 0 && position_recieved) {

@@ -63,23 +63,15 @@ namespace System.Windows.Forms {
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
 Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
+			base.HandleSelectionNotifyEvent (ref xevent);
+
 			// we requested something the source right now doesn't support
-			if (xevent.SelectionEvent.property == IntPtr.Zero) {
-				if (Enumerating) {
+			if (Enumerating) {
+				if (xevent.SelectionEvent.property == IntPtr.Zero) {
 					Content = null;
-					Enumerating = false;
 				}
-				return;
+				Enumerating = false;
 			}
-
-			X11SelectionHandler handler = X11SelectionHandler.Find ((IntPtr) xevent.SelectionEvent.target);
-			if (handler == null)
-				return;
-
-			if (Content == null)
-				Content = new DataObject ();
-
-			handler.GetData (ref xevent, Content);
 		}
 
 		internal override void HandleSelectionClearEvent (ref XEvent xevent) {
