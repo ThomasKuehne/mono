@@ -88,6 +88,7 @@ Console.Out.WriteLine("X11Selection.HandleSelectionNotifyEvent {0} {1}",
 
 		internal virtual void HandleSelectionClearEvent (ref XEvent xevent) {
 Console.Out.WriteLine("X11Selection.HandleSelectionClearEvent");
+			Outgoing = null;
 			X11SelectionHandler.FreeNativeSelectionBuffers(Selection);
 		}
 	}

@@ -82,11 +82,17 @@ Console.Out.WriteLine("X11Clipboard.HandleSelectionNotifyEvent Content");
 		}
 
 		internal string[] GetFormats () {
-Console.Out.WriteLine("X11Clipboard.GetFormats");
+			if (Outgoing != null) {
+Console.Out.WriteLine("X11Clipboard.GetFormats - MONO");
+				// from mono - to mono
+				return Outgoing.GetFormats();
+			}
+
+Console.Out.WriteLine("X11Clipboard.GetFormats - native");
 			FormatsFetch = true;
 			Formats = null;
 
-			if (0 != XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero))
+			if (1 != XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero))
 				return new string[0];
 
 			var startTime = DateTime.UtcNow;
