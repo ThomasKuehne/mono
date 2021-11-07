@@ -900,6 +900,32 @@ namespace System.Windows.Forms
 				SetProperty (ref xevent, IntPtr.Zero, -1);
 			}
 
+			protected static void SetAtoms (ref XEvent xevent, IntPtr[] atoms)
+			{
+				XEvent sel = new XEvent ();
+				sel.SelectionEvent.type = XEventName.SelectionNotify;
+				sel.SelectionEvent.send_event = true;
+				sel.SelectionEvent.display = XplatUIX11.Display;
+				sel.SelectionEvent.selection = xevent.SelectionRequestEvent.selection;
+				sel.SelectionEvent.target = xevent.SelectionRequestEvent.target;
+				sel.SelectionEvent.requestor = xevent.SelectionRequestEvent.requestor;
+				sel.SelectionEvent.time = xevent.SelectionRequestEvent.time;
+				sel.SelectionEvent.property = IntPtr.Zero;
+
+				if (atoms != null) {
+					XplatUIX11.XChangeProperty (XplatUIX11.Display, xevent.SelectionRequestEvent.requestor,
+						xevent.SelectionRequestEvent.property,
+						(IntPtr) Atom.XA_ATOM,
+						32, PropertyMode.Replace, atoms, atoms.Length);
+					sel.SelectionEvent.property = xevent.SelectionRequestEvent.property;
+				} else
+					sel.SelectionEvent.property = IntPtr.Zero;
+
+				XplatUIX11.XSendEvent (XplatUIX11.Display, xevent.SelectionRequestEvent.requestor, false,
+					(IntPtr)EventMask.NoEventMask, ref sel);
+				return;
+			}
+
 			protected static void SetBytes (ref XEvent xevent, byte[] bytes)
 			{
 				IntPtr buffer;
@@ -1265,25 +1291,19 @@ namespace System.Windows.Forms
 			}
 		}
 
-		sealed class TargetsConverter : TextConverter
+		sealed class TargetsConverter : DataConverter
 		{
-
-			internal TargetsConverter (Encoding encoding = null)
-				: base (encoding)
-			{
+			[Obsolete("should never be called - special DataConverter", true)]
+			internal override void GetData (ref XEvent xevent, X11SelectionHandler handler, IDataObject data) {
+				// NOP
+				throw new NotImplementedException("should never be called - special DataConverter");
 			}
 
 			internal override bool SetData (ref XEvent xevent, X11SelectionHandler handler, object data)
 			{
-				StringBuilder builder = new StringBuilder ();
 				IntPtr[] formats = DetermineSupportedTypes (data);
-
-				foreach (IntPtr format in formats) {
-					builder.Append (XplatUIX11.XGetAtomName (XplatUIX11.Display, format));
-					builder.Append ('\n');
-				}
-
-				return SetText (ref xevent, handler, builder.ToString ( ));
+				SetAtoms (ref xevent, formats);
+				return true;
 			}
 		}
 
