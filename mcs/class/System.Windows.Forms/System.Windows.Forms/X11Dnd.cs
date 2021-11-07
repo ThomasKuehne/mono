@@ -91,7 +91,6 @@ namespace System.Windows.Forms {
 		readonly IntPtr XdndActionLink;
 		readonly IntPtr XdndActionList;
 
-		int converts_pending;
 		bool position_recieved;
 		bool status_sent;
 		IntPtr target;
@@ -447,8 +446,8 @@ namespace System.Windows.Forms {
 		{
 			base.HandleSelectionNotifyEvent (ref xevent);
 
-			converts_pending--;
-			if (converts_pending <= 0 && position_recieved) {
+			ConvertsPending--;
+			if (ConvertsPending <= 0 && position_recieved) {
 				drag_event = new DragEventArgs (Content, 0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				control.DndEnter (drag_event);
@@ -564,7 +563,7 @@ namespace System.Windows.Forms {
 
 		void ResetSourceData ()
 		{
-			converts_pending = 0;
+			ConvertsPending = 0;
 			Content = null;
 		}
 
@@ -649,7 +648,7 @@ namespace System.Windows.Forms {
 			control = c;
 			position_recieved = true;			
 
-			if (converts_pending > 0)
+			if (ConvertsPending > 0)
 				return true;
 
 			if (!status_sent) {
@@ -816,7 +815,7 @@ namespace System.Windows.Forms {
 				if (handler == null)
 					continue;
 				if (handler.ConvertSelectionDnd (XplatUIX11.Display, Selection, toplevel)) {
-					converts_pending++;
+					ConvertsPending++;
 					match = true;
 				}
 			}

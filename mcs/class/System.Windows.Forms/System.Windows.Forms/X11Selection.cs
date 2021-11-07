@@ -28,6 +28,7 @@ namespace System.Windows.Forms {
 		internal readonly IntPtr DELETE;
 
 		protected IDataObject Content;
+		protected int ConvertsPending;
 
 		internal X11Selection (string selection)
 		{
