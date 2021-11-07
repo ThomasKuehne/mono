@@ -27,7 +27,11 @@ namespace System.Windows.Forms {
 		internal readonly IntPtr Selection;
 		internal readonly IntPtr DELETE;
 
-		protected IDataObject Content;
+		// Incomming and Outgoing have to be 2 seperate Objects for
+		// Clipboard but are identical for DND
+		protected IDataObject Incomming {get; set;}
+		protected virtual IDataObject Outgoing {get; set;}
+
 		protected int ConvertsPending;
 
 		internal X11Selection (string selection)
@@ -44,6 +48,7 @@ Console.Out.WriteLine("X11Selection.HandleSelectionRequestEvent DELETE");
 				// we are only clearing the buffer and not actualy "deleting" the content
 				// there doesn't seem to be any way to ask an dotnet application to "delete"
 				XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, IntPtr.Zero, IntPtr.Zero);
+				Outgoing = null;
 				X11SelectionHandler.SetEmpty (ref xevent);
 			} else {
 				X11SelectionHandler handler = X11SelectionHandler.Find (xevent.SelectionRequestEvent.target);
@@ -54,7 +59,7 @@ Console.Out.WriteLine("X11Selection.HandleSelectionRequestEvent Unsupported <= {
 				} else {
 Console.Out.WriteLine("X11Selection.HandleSelectionRequestEvent OK <= {0}",
 	XplatUIX11.XGetAtomName (XplatUIX11.Display, xevent.SelectionRequestEvent.target));
-					handler.SetData (ref xevent, Content);
+					handler.SetData (ref xevent, Outgoing);
 				}
 			}
 		}
@@ -65,6 +70,8 @@ Console.Out.WriteLine("X11Selection.HandleSelectionNotifyEvent {0} {1}",
 	XplatUIX11.XGetAtomName (XplatUIX11.Display, xevent.SelectionEvent.target),
 	xevent.SelectionEvent.property);
 
+			ConvertsPending--;
+
 			// we requested something the source right now doesn't support
 			if (xevent.SelectionEvent.property == IntPtr.Zero)
 				return;
@@ -73,10 +80,10 @@ Console.Out.WriteLine("X11Selection.HandleSelectionNotifyEvent {0} {1}",
 			if (handler == null)
 				return;
 
-			if (Content == null)
-				Content = new DataObject ();
+			if (Incomming == null)
+				Incomming = new DataObject ();
 
-			handler.GetData (ref xevent, Content);
+			handler.GetData (ref xevent, Incomming);
 		}
 
 		internal virtual void HandleSelectionClearEvent (ref XEvent xevent) {

@@ -47,7 +47,7 @@ namespace System.Windows.Forms {
 		readonly IntPtr FosterParent;
 		readonly UpdateMessageQueueDG UpdateMessageQueue;
 		readonly TimeSpan TimeToWaitForSelectionFormats;
-		
+
 		bool FormatsFetch;		// value is zero if we are querying available formats
 		string[] Formats;
 
@@ -67,9 +67,12 @@ namespace System.Windows.Forms {
 			if (FormatsFetch && xevent.SelectionEvent.target == TARGETS) {
 Console.Out.WriteLine("X11Clipboard.HandleSelectionNotifyEvent TARGETS");
 				if (xevent.SelectionEvent.property != IntPtr.Zero) {
-					Formats = X11SelectionHandler.ConvertTypeList(xevent.AnyEvent.display,
+					var fake_dnd = new XClientMessageEvent();
+					fake_dnd.ptr2 = (IntPtr) 1; // use window property
+
+					Formats = X11SelectionHandler.TypeListConvert(xevent.AnyEvent.display,
 						    xevent.AnyEvent.window,
-						    xevent.SelectionEvent.property);
+						    xevent.SelectionEvent.property, ref fake_dnd);
 				}
 				FormatsFetch = false;
 			} else {
@@ -78,18 +81,13 @@ Console.Out.WriteLine("X11Clipboard.HandleSelectionNotifyEvent Content");
 			}
 		}
 
-		internal override void HandleSelectionClearEvent (ref XEvent xevent) {
-Console.Out.WriteLine("X11Clipboard.HandleSelectionClearEvent");
-			base.HandleSelectionClearEvent (ref xevent);
-			Content = null;
-		}
-
 		internal string[] GetFormats () {
 Console.Out.WriteLine("X11Clipboard.GetFormats");
 			FormatsFetch = true;
 			Formats = null;
 
-			XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
+			if (0 != XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero))
+				return new string[0];
 
 			var startTime = DateTime.UtcNow;
 			while (FormatsFetch) {
@@ -101,31 +99,53 @@ Console.Out.WriteLine("X11Clipboard.GetFormats");
 
 			return Formats ?? new string[0];
 		}
-		
+
 		internal void Clear () {
 Console.Out.WriteLine("X11Clipboard.Clear");
-			Content = null;
 			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, IntPtr.Zero, IntPtr.Zero);
+
+			// to avoid race-conditions with handleSelectionClearEvent
+			Outgoing = null;
 		}
 
 		internal IDataObject GetContent () {
 Console.Out.WriteLine("X11Clipboard.GetContent");
-			if (Content != null)
-				return Content;
+			if (Outgoing != null) {
+				// from mono - to mono
+				return Outgoing;
+			}
 
-			// TODO
-			return null;
+			Incomming = new DataObject();
+
+			var owner = XplatUIX11.XGetSelectionOwner (XplatUIX11.Display, Selection);
+			if (owner == IntPtr.Zero)
+				return Incomming;
+
+			var fake_dnd = new XClientMessageEvent();
+			fake_dnd.ptr2 = (IntPtr) 1; // use window property
+
+			var handlers = X11SelectionHandler.TypeListHandlers(XplatUIX11.Display, owner, TARGETS, ref fake_dnd);
+
+			foreach (var handler in handlers){
+				Console.Out.WriteLine(handler);/*
+				// TODO locking
+				if (X11SelectionHandler.ConvertSelectionClipboard(XplatUIX11.Display, Selection, FosterParent)){
+					ConvertPending++
+				}*/
+			}
+			// TODO wait
+			return Incomming;
 		}
 
 		internal void SetContent (object data, bool copy) {
 Console.Out.WriteLine($"X11Clipboard.SetContent {data.GetType().FullName} {copy}");
 			var iData = data as IDataObject;
-			if (data != null && iData == null) {
+			if (iData == null) {
 				iData = new DataObject();
 				X11SelectionHandler.SetDataWithFormats (iData, data);
 			}
 
-			Content = iData;
+			Outgoing = iData;
 			XplatUIX11.XSetSelectionOwner (XplatUIX11.Display, Selection, FosterParent, IntPtr.Zero);
 
 			if (copy){

@@ -5,10 +5,10 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -58,12 +58,12 @@ namespace System.Windows.Forms {
 			internal MouseButtons MouseState;
 			internal DragDropEffects AllowedEffects;
 			internal Point CurMousePos;
-			
+
 			internal IntPtr LastWindow;
 			internal IntPtr LastTopLevel;
 
 			internal bool WillAccept;
-			
+
 			internal void Reset ()
 			{
 				State = DragState.None;
@@ -77,7 +77,7 @@ namespace System.Windows.Forms {
 		static readonly IntPtr [] XdndVersion = new IntPtr [] { new IntPtr (4) };
 
 		DragData drag_data;
-		
+
 		readonly IntPtr XdndAware;
 		readonly IntPtr XdndEnter;
 		readonly IntPtr XdndLeave;
@@ -112,6 +112,8 @@ namespace System.Windows.Forms {
 		bool tracking = false;
 		bool dropped = false;
 		int motion_poll;
+		
+		protected override IDataObject Outgoing { get{return Incomming;}  set{ Incomming = value;} }
 
 		internal X11Dnd ()
 			: base ("XdndSelection")
@@ -138,7 +140,7 @@ namespace System.Windows.Forms {
 				return false;
 			return drag_data.State != DragState.None;
 		}
-		
+
 		internal void SetAllowDrop (Hwnd hwnd)
 		{
 			int[] atoms;
@@ -231,7 +233,7 @@ namespace System.Windows.Forms {
 							break;
 						if (msg.message == Msg.WM_MBUTTONDOWN && drag_data.MouseState != MouseButtons.Middle)
 							break;
-						
+
 						HandleButtonUpMsg ();
 
 						// We don't want to dispatch button up neither (Match .Net)
@@ -306,7 +308,7 @@ namespace System.Windows.Forms {
 
 			// `data' and other members are already available
 			Point pos = Control.MousePosition;
-			DragEventArgs drag_args = new DragEventArgs (Content, 0, pos.X, pos.Y, drag_data.AllowedEffects, DragDropEffects.None);
+			DragEventArgs drag_args = new DragEventArgs (Incomming, 0, pos.X, pos.Y, drag_data.AllowedEffects, DragDropEffects.None);
 
 			source_control.DndEnter (drag_args);
 			if ((drag_args.Effect & drag_data.AllowedEffects) != 0)
@@ -324,7 +326,7 @@ namespace System.Windows.Forms {
 				if (drag_data.WillAccept) {
 
 					if (QueryContinue (false, DragAction.Drop))
-						return;					
+						return;
 				} else {
 
 					if (QueryContinue (false, DragAction.Cancel))
@@ -398,7 +400,7 @@ namespace System.Windows.Forms {
 
 			while (XplatUIX11.XQueryPointer (XplatUIX11.Display, window, out root, out child,
 					       out x_temp, out y_temp, out x, out y, out mask_return)) {
-					
+
 				if (!dnd_aware) {
 					dnd_aware = IsWindowDndAware (window);
 					if (dnd_aware) {
@@ -410,7 +412,7 @@ namespace System.Windows.Forms {
 
 				if (child == IntPtr.Zero)
 					break;
-					
+
 				window = child;
 			}
 		}
@@ -421,7 +423,7 @@ namespace System.Windows.Forms {
 				QueryContinue (true, DragAction.Cancel);
 			}
 		}
-		
+
 		// return true if the event is handled here
 		internal bool HandleClientMessage (ref XEvent xevent)
 		{
@@ -446,9 +448,8 @@ namespace System.Windows.Forms {
 		{
 			base.HandleSelectionNotifyEvent (ref xevent);
 
-			ConvertsPending--;
 			if (ConvertsPending <= 0 && position_recieved) {
-				drag_event = new DragEventArgs (Content, 0, pos_x, pos_y,
+				drag_event = new DragEventArgs (Incomming, 0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				control.DndEnter (drag_event);
 				SendStatus (source, drag_event.Effect);
@@ -481,12 +482,12 @@ namespace System.Windows.Forms {
 					escape, action);
 
 			Control c = MwfWindow (source);
-			
+
 			if (c == null) {
 				tracking = false;
 				return false;
 			}
-			
+
 			c.DndContinueDrag (qce);
 
 			switch (qce.Action) {
@@ -564,7 +565,7 @@ namespace System.Windows.Forms {
 		void ResetSourceData ()
 		{
 			ConvertsPending = 0;
-			Content = null;
+			Incomming = null;
 		}
 
 		void ResetTargetData ()
@@ -572,7 +573,7 @@ namespace System.Windows.Forms {
 			position_recieved = false;
 			status_sent = false;
 		}
-		
+
 		bool Accepting_HandleEnterEvent (ref XEvent xevent)
 		{
 			Reset ();
@@ -605,7 +606,7 @@ namespace System.Windows.Forms {
 			while (true) {
 				int xd, yd;
 				new_child = IntPtr.Zero;
-				
+
 				if (!XplatUIX11.XTranslateCoordinates (XplatUIX11.Display,
 						    parent, child, pos_x, pos_y,
 						    out xd, out yd, out new_child))
@@ -626,7 +627,7 @@ namespace System.Windows.Forms {
 				child = last_drop_child;
 
 			if (target != child) {
-				// We have moved into a new control 
+				// We have moved into a new control
 				// or into a control for the first time
 				Finish ();
 			}
@@ -646,16 +647,16 @@ namespace System.Windows.Forms {
 			}
 
 			control = c;
-			position_recieved = true;			
+			position_recieved = true;
 
 			if (ConvertsPending > 0)
 				return true;
 
 			if (!status_sent) {
-				drag_event = new DragEventArgs (Content, 0, pos_x, pos_y,
+				drag_event = new DragEventArgs (Incomming, 0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				control.DndEnter (drag_event);
-				
+
 				SendStatus (source, drag_event.Effect);
 				status_sent = true;
 			} else {
@@ -665,7 +666,7 @@ namespace System.Windows.Forms {
 
 				SendStatus (source, drag_event.Effect);
 			}
-			
+
 			return true;
 		}
 
@@ -673,9 +674,9 @@ namespace System.Windows.Forms {
 		{
 			if (control != null) {
 				if (drag_event == null) {
-					if (Content == null)
-						Content = new DataObject ();
-					drag_event = new DragEventArgs (Content,
+					if (Incomming == null)
+						Incomming = new DataObject ();
+					drag_event = new DragEventArgs (Incomming,
 							0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				}
@@ -688,7 +689,7 @@ namespace System.Windows.Forms {
 		bool Accepting_HandleDropEvent ()
 		{
 			if (control != null && drag_event != null) {
-				drag_event = new DragEventArgs (Content,
+				drag_event = new DragEventArgs (Incomming,
 						0, pos_x, pos_y,
 					allowed, drag_event.Effect);
 				control.DndDrop (drag_event);
@@ -713,7 +714,7 @@ namespace System.Windows.Forms {
 					return true;
 
 				drag_data.WillAccept = ((int) xevent.ClientMessageEvent.ptr2 & 0x1) != 0;
-				
+
 				GiveFeedback (xevent.ClientMessageEvent.ptr5);
 			}
 			return true;
@@ -802,22 +803,21 @@ namespace System.Windows.Forms {
 					// don't do any special handling here like it is
 					// done below in SetDataWithFormats
 					// for example "Image that implements IDataObject"
-					Content = dragged;
+					Incomming = dragged;
 				} else {
-					if (Content == null)
-						Content = new DataObject ();
-					X11SelectionHandler.SetDataWithFormats (Content, drag_data.Data);
+					if (Incomming == null)
+						Incomming = new DataObject ();
+					X11SelectionHandler.SetDataWithFormats (Incomming, drag_data.Data);
 				}
 				return true;
 			}
-			foreach (IntPtr atom in SourceSupportedList (ref xevent)) {
-				X11SelectionHandler handler = X11SelectionHandler.Find (atom);
-				if (handler == null)
-					continue;
+
+			foreach (var handler in X11SelectionHandler.TypeListHandlers(XplatUIX11.Display, source, XdndTypeList, ref xevent.ClientMessageEvent)){
 				if (handler.ConvertSelectionDnd (XplatUIX11.Display, Selection, toplevel)) {
 					ConvertsPending++;
 					match = true;
 				}
+
 			}
 			return match;
 		}
@@ -856,7 +856,7 @@ namespace System.Windows.Forms {
 			if (supported.Length > 3)
 				ptr2 |= 1;
 			xevent.ClientMessageEvent.ptr2 = (IntPtr) ptr2;
-			
+
 			if (supported.Length > 0)
 				xevent.ClientMessageEvent.ptr3 = supported [0];
 			if (supported.Length > 1)
@@ -878,7 +878,7 @@ namespace System.Windows.Forms {
 			xevent.ClientMessageEvent.format = 32;
 			xevent.ClientMessageEvent.ptr1 = from;
 			xevent.ClientMessageEvent.ptr3 = time;
-			
+
 			XplatUIX11.XSendEvent (XplatUIX11.Display, handle, false, IntPtr.Zero, ref xevent);
 			dropped = true;
 		}
@@ -896,7 +896,7 @@ namespace System.Windows.Forms {
 			xevent.ClientMessageEvent.ptr3 = (IntPtr) ((x << 16) | (y & 0xFFFF));
 			xevent.ClientMessageEvent.ptr4 = time;
 			xevent.ClientMessageEvent.ptr5 = action;
-			
+
 			XplatUIX11.XSendEvent (XplatUIX11.Display, handle, false, IntPtr.Zero, ref xevent);
 		}
 
@@ -928,25 +928,6 @@ namespace System.Windows.Forms {
 			XplatUIX11.XSendEvent (XplatUIX11.Display, source, false, IntPtr.Zero, ref xevent);
 		}
 
-		IntPtr [] SourceSupportedList (ref XEvent xevent)
-		{
-			IntPtr [] res;
-
-			if (((int) xevent.ClientMessageEvent.ptr2 & 0x1) == 1) {
-				res = X11SelectionHandler.ReadTypeList(XplatUIX11.Display, source, XdndTypeList);
-
-				if (res != null)
-					return res;
-			}
-
-			res = new IntPtr [3];
-			res [0] = xevent.ClientMessageEvent.ptr3;
-			res [1] = xevent.ClientMessageEvent.ptr4;
-			res [2] = xevent.ClientMessageEvent.ptr5;
-
-			return res;
-		}
-
 		Control MwfWindow (IntPtr window)
 		{
 			Hwnd hwnd = Hwnd.ObjectFromHandle (window);
@@ -954,10 +935,10 @@ namespace System.Windows.Forms {
 				return null;
 
 			Control res = Control.FromHandle (hwnd.client_window);
-			
+
 			if (res == null)
 				res = Control.FromHandle (window);
-				
+
 			return res;
 		}
 

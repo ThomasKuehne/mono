@@ -674,8 +674,17 @@ namespace System.Windows.Forms
 			return null;
 		}
 
-		internal static IntPtr[] ReadTypeList (IntPtr source_display, IntPtr source_window, IntPtr type_property)
+		static IntPtr[] TypeList (IntPtr source_display, IntPtr source_window, IntPtr type_property, ref XClientMessageEvent dnd)
 		{
+			if (((int) dnd.ptr2 & 0x1) == 0) {
+				var res = new IntPtr [3];
+				res [0] = dnd.ptr3;
+				res [1] = dnd.ptr4;
+				res [2] = dnd.ptr5;
+
+				return res;
+			}
+
 			IntPtr type;
 			int format;
 			IntPtr count;
@@ -710,8 +719,8 @@ namespace System.Windows.Forms
 			}
 		}
 
-		internal static string[] ConvertTypeList (IntPtr source_display, IntPtr source_window, IntPtr type_property){
-			var formats = ReadTypeList (source_display, source_window, type_property);
+		internal static string[] TypeListConvert (IntPtr source_display, IntPtr source_window, IntPtr type_property, ref XClientMessageEvent dnd){
+			var formats = TypeList (source_display, source_window, type_property, ref dnd);
 
 			if (formats == null || formats.Length < 1)
 				return new string[0];
@@ -730,6 +739,34 @@ namespace System.Windows.Forms
 			}
 
 			return net_formats.ToArray();
+		}
+
+		internal static X11SelectionHandler[] TypeListHandlers (IntPtr source_display, IntPtr source_window, IntPtr type_property, ref XClientMessageEvent dnd){
+			var formats = TypeList (source_display, source_window, type_property, ref dnd);
+
+			if (formats == null || formats.Length < 1)
+				return new X11SelectionHandler[0];
+
+			var net_formats = new List<string>();
+			var handlers = new List<X11SelectionHandler>();
+
+			foreach (var format in formats){
+				var handler = X11SelectionHandler.Find (format);
+				if (handler != null) {
+					var handler_added = false;
+					foreach (var net_format in handler.NetNames) {
+						if (net_formats.IndexOf (net_format) < 0) {
+							net_formats.Add (net_format);
+							if (!handler_added) {
+								handlers.Add (handler);
+								handler_added = true;
+							}
+						}
+					}
+				}
+			}
+
+			return handlers.ToArray();
 		}
 
 		abstract class DataConverter
