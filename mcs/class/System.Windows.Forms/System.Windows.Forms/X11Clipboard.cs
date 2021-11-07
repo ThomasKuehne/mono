@@ -109,12 +109,26 @@ Console.Out.WriteLine("X11Clipboard.Clear");
 
 		internal IDataObject GetContent () {
 Console.Out.WriteLine("X11Clipboard.GetContent");
-			throw new NotImplementedException();
+			if (Content != null)
+				return Content;
+
+			// TODO
+			return null;
 		}
 
 		internal void SetContent (object data, bool copy) {
-Console.Out.WriteLine("X11Clipboard.SetContent");
-			throw new NotImplementedException();
+Console.Out.WriteLine($"X11Clipboard.SetContent {data} {copy}");
+			var iData = data as IDataObject;
+			if (data != null && iData == null) {
+				iData = new DataObject();
+				X11SelectionHandler.SetDataWithFormats (iData, data);
+			}
+
+			Content = iData;
+
+			if (copy){
+				// TODO
+			}
 		}
 	}
 }
