@@ -33,7 +33,17 @@ namespace System.Windows.Forms {
 			Selection = XplatUIX11.XInternAtom (XplatUIX11.Display, selection, false);
 		}
 
-		internal abstract void HandleSelectionRequestEvent (ref XEvent xevent);
+		internal virtual void HandleSelectionRequestEvent (ref XEvent xevent)
+		{
+Console.Out.WriteLine($"X11Selection.HandleSelectionRequestEvent {xevent}");
+			X11SelectionHandler handler = X11SelectionHandler.Find (xevent.SelectionRequestEvent.target);
+			if (handler == null) {
+				X11SelectionHandler.SetUnsupported (ref xevent);
+			} else {
+				handler.SetData (ref xevent, Content);
+			}
+		}
+
 		internal abstract void HandleSelectionNotifyEvent (ref XEvent xevent);
 		
 		internal virtual void HandleSelectionClearEvent (ref XEvent xevent) {

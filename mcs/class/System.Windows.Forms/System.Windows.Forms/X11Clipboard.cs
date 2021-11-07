@@ -60,17 +60,6 @@ namespace System.Windows.Forms {
 			TimeToWaitForSelectionFormats = TimeSpan.FromSeconds(4);
 		}
 
-		internal override void HandleSelectionRequestEvent (ref XEvent xevent)
-		{
-Console.Out.WriteLine($"X11Clipboard.HandleSelectionRequestEvent {xevent}");
-			X11SelectionHandler handler = X11SelectionHandler.Find (xevent.SelectionRequestEvent.target);
-			if (handler == null) {
-				X11SelectionHandler.SetUnsupported (ref xevent);
-			} else {
-				handler.SetData (ref xevent, Content);
-			}
-		}
-
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
 Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
