@@ -48,14 +48,14 @@ namespace System.Windows.Forms {
 		readonly UpdateMessageQueueDG UpdateMessageQueue;
 		readonly TimeSpan TimeToWaitForSelectionFormats;
 		
-		bool Enumerating;		// value is zero if we are querying available formats
+		bool FormatsFetch;		// value is zero if we are querying available formats
+		string[] Formats;
 
 		internal X11Clipboard (string selection, UpdateMessageQueueDG updateMessageQueue, IntPtr fosterParent)
 			: base (selection)
 		{
 			UpdateMessageQueue = updateMessageQueue;
 			FosterParent = fosterParent;
-
 
 			TARGETS = XplatUIX11.XInternAtom (XplatUIX11.Display, "TARGETS", false);
 
@@ -65,14 +65,15 @@ namespace System.Windows.Forms {
 		internal override void HandleSelectionNotifyEvent (ref XEvent xevent)
 		{
 Console.Out.WriteLine($"X11Clipboard.HandleSelectionNotifyEvent {xevent}");
-			base.HandleSelectionNotifyEvent (ref xevent);
-
-			// we requested something the source right now doesn't support
-			if (Enumerating) {
-				if (xevent.SelectionEvent.property == IntPtr.Zero) {
-					Content = null;
+			if (FormatsFetch && xevent.SelectionEvent.target == TARGETS) {
+				if (xevent.SelectionEvent.property != IntPtr.Zero) {
+					Formats = X11SelectionHandler.ConvertTypeList(xevent.AnyEvent.display,
+						    xevent.AnyEvent.window,
+						    xevent.SelectionEvent.property);
 				}
-				Enumerating = false;
+				FormatsFetch = false;
+			} else {
+				base.HandleSelectionNotifyEvent (ref xevent);
 			}
 		}
 
@@ -84,24 +85,20 @@ Console.Out.WriteLine($"X11Clipboard.HandleSelectionClearEvent {xevent}");
 
 		internal string[] GetFormats () {
 Console.Out.WriteLine("X11Clipboard.GetFormats");
-			if (XplatUIX11.XGetSelectionOwner(XplatUIX11.Display, Selection) == IntPtr.Zero) {
-				return new string[0];
-			}
-
-			// TARGETS is supported by all, no iteration required - see ICCCM chapter 2.6.2. Target Atoms
-			Enumerating = true;
+			FormatsFetch = true;
+			Formats = null;
 
 			XplatUIX11.XConvertSelection(XplatUIX11.Display, Selection, TARGETS, TARGETS, FosterParent, IntPtr.Zero);
 
 			var startTime = DateTime.UtcNow;
-			while (Enumerating) {
+			while (FormatsFetch) {
 				UpdateMessageQueue(null, false);
 
 				if (DateTime.UtcNow - startTime > TimeToWaitForSelectionFormats)
 					break;
 			}
 
-			return Content?.GetFormats();
+			return Formats ?? new string[0];
 		}
 		
 		internal void Clear () {

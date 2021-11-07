@@ -705,6 +705,28 @@ namespace System.Windows.Forms
 			}
 		}
 
+		internal static string[] ConvertTypeList (IntPtr source_display, IntPtr source_window, IntPtr type_property){
+			var formats = ReadTypeList (source_display, source_window, type_property);
+
+			if (formats == null || formats.Length < 1)
+				return new string[0];
+
+			var net_formats = new List<string>();
+
+			foreach (var format in formats){
+				var handler = X11SelectionHandler.Find (format);
+				if (handler != null) {
+					foreach (var net_format in handler.NetNames) {
+						if (net_formats.IndexOf (net_format) < 0) {
+							net_formats.Add (net_format);
+						}
+					}
+				}
+			}
+
+			return net_formats.ToArray();
+		}
+
 		abstract class DataConverter
 		{
 			internal abstract void GetData (ref XEvent xevent, X11SelectionHandler handler, IDataObject data);
