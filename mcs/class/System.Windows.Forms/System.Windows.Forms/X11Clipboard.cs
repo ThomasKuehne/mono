@@ -47,7 +47,6 @@ namespace System.Windows.Forms {
 		readonly UpdateMessageQueueDG UpdateMessageQueue;
 		readonly TimeSpan TimeToWaitForSelectionFormats;
 		
-		IDataObject Content;		// Object on the clipboard
 		bool Enumerating;		// value is zero if we are querying available formats
 
 		internal X11Clipboard (string selection, UpdateMessageQueueDG updateMessageQueue)

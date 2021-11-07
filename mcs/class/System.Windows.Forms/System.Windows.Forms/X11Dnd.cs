@@ -97,7 +97,6 @@ namespace System.Windows.Forms {
 		IntPtr target;
 		IntPtr source;
 		IntPtr toplevel;
-		IDataObject data;
 
 		Control control;
 		int pos_x, pos_y;
@@ -308,7 +307,7 @@ namespace System.Windows.Forms {
 
 			// `data' and other members are already available
 			Point pos = Control.MousePosition;
-			DragEventArgs drag_args = new DragEventArgs (data, 0, pos.X, pos.Y, drag_data.AllowedEffects, DragDropEffects.None);
+			DragEventArgs drag_args = new DragEventArgs (Content, 0, pos.X, pos.Y, drag_data.AllowedEffects, DragDropEffects.None);
 
 			source_control.DndEnter (drag_args);
 			if ((drag_args.Effect & drag_data.AllowedEffects) != 0)
@@ -454,14 +453,14 @@ namespace System.Windows.Forms {
 			if (handler == null)
 				return;
 
-			if (data == null)
-				data = new DataObject ();
+			if (Content == null)
+				Content = new DataObject ();
 
-			handler.GetData (ref xevent, data);
+			handler.GetData (ref xevent, Content);
 
 			converts_pending--;
 			if (converts_pending <= 0 && position_recieved) {
-				drag_event = new DragEventArgs (data, 0, pos_x, pos_y,
+				drag_event = new DragEventArgs (Content, 0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				control.DndEnter (drag_event);
 				SendStatus (source, drag_event.Effect);
@@ -577,7 +576,7 @@ namespace System.Windows.Forms {
 		void ResetSourceData ()
 		{
 			converts_pending = 0;
-			data = null;
+			Content = null;
 		}
 
 		void ResetTargetData ()
@@ -665,7 +664,7 @@ namespace System.Windows.Forms {
 				return true;
 
 			if (!status_sent) {
-				drag_event = new DragEventArgs (data, 0, pos_x, pos_y,
+				drag_event = new DragEventArgs (Content, 0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				control.DndEnter (drag_event);
 				
@@ -686,9 +685,9 @@ namespace System.Windows.Forms {
 		{
 			if (control != null) {
 				if (drag_event == null) {
-					if (data == null)
-						data = new DataObject ();
-					drag_event = new DragEventArgs (data,
+					if (Content == null)
+						Content = new DataObject ();
+					drag_event = new DragEventArgs (Content,
 							0, pos_x, pos_y,
 					allowed, DragDropEffects.None);
 				}
@@ -701,7 +700,7 @@ namespace System.Windows.Forms {
 		bool Accepting_HandleDropEvent ()
 		{
 			if (control != null && drag_event != null) {
-				drag_event = new DragEventArgs (data,
+				drag_event = new DragEventArgs (Content,
 						0, pos_x, pos_y,
 					allowed, drag_event.Effect);
 				control.DndDrop (drag_event);
@@ -815,11 +814,11 @@ namespace System.Windows.Forms {
 					// don't do any special handling here like it is
 					// done below in SetDataWithFormats
 					// for example "Image that implements IDataObject"
-					data = dragged;
+					Content = dragged;
 				} else {
-					if (data == null)
-						data = new DataObject ();
-					X11SelectionHandler.SetDataWithFormats (data, drag_data.Data);
+					if (Content == null)
+						Content = new DataObject ();
+					X11SelectionHandler.SetDataWithFormats (Content, drag_data.Data);
 				}
 				return true;
 			}

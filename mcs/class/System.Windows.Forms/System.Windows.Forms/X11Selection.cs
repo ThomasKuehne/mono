@@ -26,6 +26,8 @@ namespace System.Windows.Forms {
 	internal abstract class X11Selection {
 		internal readonly IntPtr Selection;
 
+		protected IDataObject Content;
+
 		internal X11Selection (string selection)
 		{
 			Selection = XplatUIX11.XInternAtom (XplatUIX11.Display, selection, false);
