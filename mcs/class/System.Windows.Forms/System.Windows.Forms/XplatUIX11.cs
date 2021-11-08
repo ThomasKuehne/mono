@@ -2301,6 +2301,9 @@ Console.Out.WriteLine("XplatUIX11.SelectionNotify");
 				return new Rectangle(0, 0, width, height);
 
 			failsafe:
+				if (prop != IntPtr.Zero)
+					XFree (prop);
+
 				XWindowAttributes	attributes=new XWindowAttributes();
 
 				lock (XlibLock) {
