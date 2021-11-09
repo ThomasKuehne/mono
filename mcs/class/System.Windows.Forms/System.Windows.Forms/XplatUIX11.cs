@@ -7408,19 +7408,6 @@ Console.Out.WriteLine("XplatUIX11.SelectionNotify");
 		[DllImport ("libX11", EntryPoint="XGetInputFocus")]
 		internal extern static void XGetInputFocus (IntPtr display, out IntPtr focus, out IntPtr revert_to);
 		#endregion
-#region Gtk/Gdk imports
-		[DllImport("libgdk-x11-2.0")]
-		internal extern static IntPtr gdk_atom_intern (string atomName, bool onlyIfExists);
-
-		[DllImport("libgtk-x11-2.0")]
-		internal extern static IntPtr gtk_clipboard_get (IntPtr atom);
-
-		[DllImport("libgtk-x11-2.0")]
-		internal extern static void gtk_clipboard_store (IntPtr clipboard);
-
-		[DllImport("libgtk-x11-2.0")]
-		internal extern static void gtk_clipboard_set_text (IntPtr clipboard, string text, int len);
-#endregion
 
 #region Shape extension imports
 		[DllImport("libXext")]
