@@ -552,6 +552,21 @@ namespace System.Windows.Forms {
 				throw new ArgumentNullException("Display", "Could not open display (X-Server required. Check your DISPLAY environment variable)");
 			}
 		}
+
+		internal static string XGetAtomName (IntPtr display, IntPtr atom)
+		{
+			IntPtr buf = _XGetAtomName (display, atom);
+
+			if (buf == IntPtr.Zero)
+				return null;
+
+			string name = Marshal.PtrToStringAuto (buf);
+
+			XFree (buf);
+
+			return name;
+		}
+
 		#endregion	// Internal Methods
 
 		#region Methods
@@ -6392,11 +6407,11 @@ Console.Out.WriteLine("XplatUIX11.SelectionNotify");
 		}
 
 		[DllImport ("libX11", EntryPoint="XGetAtomName")]
-		internal extern static string _XGetAtomName(IntPtr display, IntPtr atom);
-		internal static string XGetAtomName(IntPtr display, IntPtr atom)
+		extern static IntPtr __XGetAtomName(IntPtr display, IntPtr atom);
+		static IntPtr _XGetAtomName(IntPtr display, IntPtr atom)
 		{
 			DebugHelper.TraceWriteLine ("XGetAtomName");
-			return XGetAtomName(display, atom);
+			return __XGetAtomName(display, atom);
 		}
 
 		[DllImport ("libX11", EntryPoint="XGrabPointer")]
@@ -7173,7 +7188,7 @@ Console.Out.WriteLine("XplatUIX11.SelectionNotify");
 		internal extern static int XInternAtoms(IntPtr display, string[] atom_names, int atom_count, bool only_if_exists, IntPtr[] atoms);
 
 		[DllImport ("libX11", EntryPoint="XGetAtomName")]
-		internal extern static string XGetAtomName(IntPtr display, IntPtr atom);
+		extern static IntPtr _XGetAtomName(IntPtr display, IntPtr atom);
 
 		[DllImport ("libX11", EntryPoint="XSetWMProtocols")]
 		internal extern static int XSetWMProtocols(IntPtr display, IntPtr window, IntPtr[] protocols, int count);
